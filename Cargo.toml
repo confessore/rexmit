@@ -6,13 +6,20 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+tracing = "0.1"
+tracing-subscriber = "0.2"
+tracing-futures = "0.2"
+
+[dependencies.songbird]
+git = "https://github.com/serenity-rs/songbird"
+branch = "current"
 
 [dependencies.serenity]
 git = "https://github.com/serenity-rs/serenity"
 branch = "current"
 default-features = false
-features = ["client", "gateway", "rustls_backend", "model"]
+features = ["client", "gateway", "rustls_backend", "model", "standard_framework", "voice"]
 
 [dependencies.tokio]
 version = "1.0"
-features = ["macros", "rt-multi-thread"]
+features = ["macros", "rt-multi-thread", "signal"]
