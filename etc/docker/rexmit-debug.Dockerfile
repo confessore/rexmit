@@ -4,7 +4,7 @@ RUN apt update &&  \
     rm -rf /var/lib/apt/lists/*
 WORKDIR /usr/src/rexmit
 COPY . .
-RUN --mount=type=cache,target=/usr/local/cargo/registry cargo install --path .
+RUN cargo install --path .
 
 FROM debian:buster-slim AS stage
 RUN apt update &&  \
