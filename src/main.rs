@@ -49,9 +49,10 @@ async fn main() {
     let path = env::var("APPLICATION__DISCORDOPTIONS__TOKEN").expect("Expected a token in the environment");
     let token = fs::read_to_string(path).expect("should have been a file path");
     // Configure the client with your Discord bot token in the environment.
-    let intents = GatewayIntents::GUILD_MESSAGES
-        | GatewayIntents::DIRECT_MESSAGES
-        | GatewayIntents::MESSAGE_CONTENT;
+    let intents = GatewayIntents::GUILD_MESSAGES |
+        GatewayIntents::DIRECT_MESSAGES |
+        GatewayIntents::MESSAGE_CONTENT |
+        GatewayIntents::GUILD_VOICE_STATES;
     let mut client =
         Client::builder(&token, intents).event_handler(Handler).await.expect("Err creating client");
 
