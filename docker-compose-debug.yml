@@ -34,6 +34,7 @@ services:
         build:
             context: .
             dockerfile: etc/docker/rexmit-debug.Dockerfile
+            target: stage
         secrets:
             - discord-token
         environment:

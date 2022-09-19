@@ -18,7 +18,7 @@ branch = "current"
 git = "https://github.com/serenity-rs/serenity"
 branch = "current"
 default-features = false
-features = ["client", "gateway", "rustls_backend", "model", "standard_framework", "voice"]
+features = ["client", "gateway", "rustls_backend", "model", "voice"]
 
 [dependencies.tokio]
 version = "1.0"

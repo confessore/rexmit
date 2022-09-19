@@ -17,7 +17,6 @@ impl EventHandler for Handler {
                 Ok(channel) => channel,
                 Err(why) => {
                     println!("Error getting channel: {:?}", why);
-
                     return;
                 },
             };
