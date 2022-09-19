@@ -1,0 +1,57 @@
+version: "3.7"
+
+services:
+
+    redis:
+        image: redis
+        ports:
+            - 6379:6379
+        volumes:
+            - rexmit-redis:/data
+        restart: always
+
+    postgres:
+        depends_on:
+            - redis
+        image: postgres
+        secrets:
+            - postgres-user
+            - postgres-password
+        environment:
+            - PGDATA=/var/lib/postgresql/data/pgdata
+            - POSTGRES_USER_FILE/run/secrets/postgres-user
+            - POSTGRES_PASSWORD_FILE=/run/secrets/postgres-password
+        ports:
+            - 5432:5432
+        volumes:
+            - rexmit-postgres:/var/lib/postgresql/data
+        restart: always
+
+    rexmit:
+        depends_on:
+            - redis
+            - postgres
+        build:
+            context: .
+            dockerfile: etc/docker/rexmit-debug.Dockerfile
+        secrets:
+            - discord-token
+        environment:
+            - APPLICATION__DISCORDOPTIONS__TOKEN=/run/secrets/discord-token
+        restart: always
+
+secrets:
+
+    postgres-user:
+        file: secrets/postgres-user
+    postgres-password:
+        file: secrets/postgres-password
+    discord-token:
+        file: secrets/discord-token
+
+volumes:
+
+    rexmit-redis:
+        external: true
+    rexmit-postgres:
+        external: true
