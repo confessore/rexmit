@@ -51,14 +51,18 @@ services:
             - APPLICATION__DISCORDOPTIONS__TOKEN=/run/secrets/discord-token
         restart: always
 
-    rexmit-yew:
+    nginx:
         depends_on:
             - redis
             - postgres
+            - rexmit-actix
+            - rexmit-serenity
         build:
             context: .
-            dockerfile: etc/docker/rexmit-debug.Dockerfile
-            target: yew-prod
+            dockerfile: etc/docker/nginx-debug.Dockerfile
+        ports:
+            - 80:80
+            - 443:443
         restart: always
 
 secrets:

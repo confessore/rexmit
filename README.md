@@ -9,6 +9,8 @@ follow these instructions to deploy rexmit
 - docker
 - discord bot token
 
+- cmake (only if you require rust-analyzer for dev)
+
 ## installation
 
 1. clone this repository
