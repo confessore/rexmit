@@ -27,18 +27,38 @@ services:
             - rexmit-postgres:/var/lib/postgresql/data
         restart: always
 
-    rexmit:
+    rexmit-actix:
         depends_on:
             - redis
             - postgres
         build:
             context: .
             dockerfile: etc/docker/rexmit-debug.Dockerfile
-            target: stage
+            target: actix-prod
+        restart: always
+
+    rexmit-serenity:
+        depends_on:
+            - redis
+            - postgres
+        build:
+            context: .
+            dockerfile: etc/docker/rexmit-debug.Dockerfile
+            target: serenity-prod
         secrets:
             - discord-token
         environment:
             - APPLICATION__DISCORDOPTIONS__TOKEN=/run/secrets/discord-token
+        restart: always
+
+    rexmit-yew:
+        depends_on:
+            - redis
+            - postgres
+        build:
+            context: .
+            dockerfile: etc/docker/rexmit-debug.Dockerfile
+            target: yew-prod
         restart: always
 
 secrets:
