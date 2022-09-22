@@ -48,7 +48,7 @@ struct General;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
-    
+
     // Configure the client with your Discord bot token in the environment.
     let path = env::var("APPLICATION__DISCORDOPTIONS__TOKEN").expect("Expected a token in the environment");
     let token = fs::read_to_string(path).expect("should have been a file path");
