@@ -50,3 +50,16 @@ follow these instructions to deploy rexmit
     ~leave
     ~play https://www.youtube.com/watch?v=jfKfPfyJRdk
     ```
+
+## features
+- actix for backend api
+
+- serenity with songbird for discord
+
+- yew for frontend api
+
+- nginx for http/https
+
+- postgres for sql storage
+
+- redis for caching
