@@ -11,6 +11,11 @@ follow these instructions to deploy rexmit
 
 - cmake (only if you require rust-analyzer for dev)
 
+- some operating systems may require modifying `/etc/hosts`
+    ```
+    127.0.0.1       localhost       www.localhost   api.localhost
+    ```
+
 ## installation
 
 1. clone this repository
