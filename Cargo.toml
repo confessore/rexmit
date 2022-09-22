@@ -1,5 +1,6 @@
 [workspace]
 members = [
     "src/rexmit-actix",
-    "src/rexmit-serenity"
+    "src/rexmit-serenity",
+    "src/rexmit-yew"
 ]
