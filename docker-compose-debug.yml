@@ -35,6 +35,8 @@ services:
             context: .
             dockerfile: etc/docker/rexmit-debug.Dockerfile
             target: actix-prod
+        ports:
+            - 5000:5000
         restart: always
 
     rexmit-serenity:
@@ -49,6 +51,8 @@ services:
             - discord-token
         environment:
             - APPLICATION__DISCORDOPTIONS__TOKEN=/run/secrets/discord-token
+        ports:
+            - 5002:5002
         restart: always
 
     rexmit-yew:
@@ -59,6 +63,8 @@ services:
             context: .
             dockerfile: etc/docker/rexmit-debug.Dockerfile
             target: yew-prod
+        ports:
+            - 5001:5001
         restart: always
 
     nginx:
