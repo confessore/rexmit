@@ -17,7 +17,7 @@ follow these instructions to deploy rexmit
     ```
 
 - if you're on a mac, airplay receiver uses port 5000.
-    you can disable airplay reciver by navigating to system preferences > sharing > uncheck airplay reciever
+    you can disable airplay receiver by navigating to system preferences > sharing > uncheck airplay receiver
 
 ## installation
 
