@@ -1,8 +1,11 @@
-FROM debian:bookworm-slim AS base
+FROM debian:bullseye-slim AS base
 WORKDIR /
 
 
 FROM rust AS chef
+RUN apt update &&  \
+    apt install -y libssl-dev pkg-config libopus-dev ffmpeg youtube-dl && \
+    rm -rf /var/lib/apt/lists/*
 RUN cargo install cargo-chef
 WORKDIR /
 
@@ -37,28 +40,21 @@ COPY --from=actix-builder /usr/src/rexmit/src/rexmit-actix/target/release/rexmit
 CMD ["rexmit-actix"]
 
 
-FROM debian:bookworm-slim AS serenity-base
+FROM base AS serenity-base
 RUN apt update &&  \
-    apt install -y libc6 libopus-dev ffmpeg youtube-dl && \
+    apt install -y libssl-dev pkg-config libopus-dev ffmpeg youtube-dl && \
     rm -rf /var/lib/apt/lists/*
 WORKDIR /
 
 
-FROM rust AS serenity-chef
-RUN apt update &&  \
-    apt install -y libopus-dev ffmpeg youtube-dl && \
-    rm -rf /var/lib/apt/lists/*
-RUN cargo install cargo-chef
-
-
-FROM serenity-chef AS serenity-planner
+FROM chef AS serenity-planner
 WORKDIR /usr/src/rexmit
 COPY ./src/rexmit-serenity ./src/rexmit-serenity
 WORKDIR /usr/src/rexmit/src/rexmit-serenity
 RUN cargo chef prepare --recipe-path recipe.json
 
 
-FROM serenity-chef AS serenity-cacher
+FROM chef AS serenity-cacher
 WORKDIR /usr/src/rexmit/src/rexmit-serenity
 COPY --from=serenity-planner /usr/src/rexmit/src/rexmit-serenity/recipe.json /usr/src/rexmit/src/rexmit-serenity/recipe.json
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
@@ -66,7 +62,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo chef cook --release --recipe-path recipe.json
 
 
-FROM serenity-chef AS serenity-builder
+FROM chef AS serenity-builder
 WORKDIR /usr/src/rexmit
 COPY ./src/rexmit-serenity ./src/rexmit-serenity
 WORKDIR /usr/src/rexmit/src/rexmit-serenity

@@ -34,6 +34,8 @@ use serenity::{
 
 struct Handler;
 
+const BASE_URL: &str = "http://rexmit-actix:5000";
+
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, _: Context, ready: Ready) {
@@ -133,6 +135,10 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
 
     let _handler = manager.join(guild_id, connect_to).await;
 
+    let url = format!("{}/echo", BASE_URL);
+    let result = reqwest::Client::new().post(&url).body("example").send().await?.text().await?;
+    println!("{}", url);
+    println!("{}", result);
     Ok(())
 }
 

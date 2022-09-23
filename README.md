@@ -18,6 +18,8 @@ follow these instructions to deploy rexmit
 
 ## installation
 
+- please note that subsequent builds will be significantly less time consuming thanks to layer caching
+
 1. clone this repository
 
 2. change directory to this repository
