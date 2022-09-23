@@ -16,6 +16,9 @@ follow these instructions to deploy rexmit
     127.0.0.1       localhost       www.localhost   api.localhost
     ```
 
+- if you're on a mac, airplay receiver uses port 5000.
+    you can disable airplay reciver by navigating to system preferences > sharing > uncheck airplay reciever
+
 ## installation
 
 - please note that subsequent builds will be significantly less time consuming thanks to layer caching
