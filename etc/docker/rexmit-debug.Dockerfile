@@ -78,6 +78,7 @@ CMD ["rexmit-serenity"]
 
 
 FROM rust:slim AS yew-base
+RUN rustup target add wasm32-unknown-unknown
 RUN cargo install trunk
 WORKDIR /
 
@@ -98,7 +99,6 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 
 
 FROM yew-base AS yew-builder
-RUN rustup target add wasm32-unknown-unknown
 WORKDIR /usr/src/rexmit
 COPY ./src/rexmit-yew ./src/rexmit-yew
 WORKDIR /usr/src/rexmit/src/rexmit-yew
