@@ -22,6 +22,8 @@ follow these instructions to deploy rexmit
 ## installation
 
 - please note that subsequent builds will be significantly less time consuming thanks to layer caching
+- initial build on an apple m1 is ~6min
+- successive builds are ~2min
 
 1. clone this repository
 
