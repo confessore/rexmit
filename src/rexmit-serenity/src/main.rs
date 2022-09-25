@@ -8,6 +8,7 @@
 //! ```
 use std::env;
 use std::fs;
+use rexmit::Transmission;
 
 // This trait adds the `register_songbird` and `register_songbird_with` methods
 // to the client builder below, making it easy to install this voice client.
