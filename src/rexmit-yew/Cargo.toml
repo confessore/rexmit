@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 rexmit = { path = "../rexmit" }
 yew = { git = "https://github.com/yewstack/yew/", features = ["csr"] }
+getrandom = { version = "0.2", features = ["js"] }

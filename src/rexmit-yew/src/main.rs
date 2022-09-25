@@ -2,19 +2,10 @@ use yew::prelude::*;
 
 #[function_component]
 fn App() -> Html {
-    let counter = use_state(|| 0);
-    let onclick = {
-        let counter = counter.clone();
-        move |_| {
-            let value = *counter + 1;
-            counter.set(value);
-        }
-    };
 
     html! {
         <div>
-            <button {onclick}>{ "+1" }</button>
-            <p>{ *counter }</p>
+            <a href="https://discord.com/api/oauth2/authorize?client_id=1021189711366213672&permissions=0&scope=bot"><button>{"add to your server"}</button></a>
         </div>
     }
 }

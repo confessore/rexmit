@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM debian:bullseye-slim
 RUN apt-get update -y
 RUN apt-get install -y nginx
 COPY etc/openssl/localhost.key ./etc/ssl/localhost.key
