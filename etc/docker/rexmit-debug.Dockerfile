@@ -88,8 +88,17 @@ RUN rustup target add wasm32-unknown-unknown
 RUN cargo install trunk
 WORKDIR /
 
+FROM chef AS yew-chef
+RUN rustup target add wasm32-unknown-unknown
+RUN cargo install trunk
+RUN --mount=type=cache,target=/var/cache/apt apt update && apt install curl -y && \
+  curl -sL https://deb.nodesource.com/setup_16.x | bash - && \
+  apt install nodejs -y && rm -rf /var/lib/apt/lists/*
+RUN npm i -g tailwindcss
+WORKDIR /
 
-FROM chef AS yew-planner
+
+FROM yew-chef AS yew-planner
 WORKDIR /usr/src/rexmit
 COPY ./src/rexmit ./src/rexmit
 COPY ./src/rexmit-yew ./src/rexmit-yew
@@ -97,7 +106,7 @@ WORKDIR /usr/src/rexmit/src/rexmit-yew
 RUN cargo chef prepare --recipe-path recipe.json
 
 
-FROM chef AS yew-cacher
+FROM yew-chef AS yew-cacher
 WORKDIR /usr/src/rexmit
 COPY --from=yew-planner /usr/src/rexmit/src/rexmit /usr/src/rexmit/src/rexmit
 COPY --from=yew-planner /usr/src/rexmit/src/rexmit-yew/recipe.json /usr/src/rexmit/src/rexmit-yew/recipe.json
@@ -107,13 +116,14 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo chef cook --release --recipe-path recipe.json
 
 
-FROM yew-base AS yew-builder
+FROM yew-chef AS yew-builder
 WORKDIR /usr/src/rexmit
 COPY ./src/rexmit ./src/rexmit
 COPY ./src/rexmit-yew ./src/rexmit-yew
 COPY --from=yew-cacher /usr/src/rexmit/src/rexmit-yew/target /usr/src/rexmit/src/rexmit-yew/target
 COPY --from=yew-cacher $CARGO_HOME $CARGO_HOME
 WORKDIR /usr/src/rexmit/src/rexmit-yew
+RUN NODE_ENV=production tailwindcss -c ./tailwind.config.js -o ./tailwind.css --minify
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     trunk build
 
