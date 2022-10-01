@@ -124,12 +124,12 @@ COPY --from=yew-cacher /usr/src/rexmit/src/rexmit-yew/target /usr/src/rexmit/src
 COPY --from=yew-cacher $CARGO_HOME $CARGO_HOME
 WORKDIR /usr/src/rexmit/src/rexmit-yew
 RUN NODE_ENV=production tailwindcss -c ./tailwind.config.js -o ./tailwind.css --minify
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    trunk build
+RUN --mount=type=cache,target=/usr/local/cargo/registry trunk build
 
 
 FROM yew-base AS yew-prod
 COPY --from=yew-builder /usr/src/rexmit/src/rexmit /usr/src/rexmit/src/rexmit
 COPY --from=yew-builder /usr/src/rexmit/src/rexmit-yew /usr/src/rexmit/src/rexmit-yew
 WORKDIR /usr/src/rexmit/src/rexmit-yew
+RUN trunk build
 CMD ["trunk", "serve", "--address", "0.0.0.0"]
