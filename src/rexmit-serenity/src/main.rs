@@ -32,6 +32,7 @@ use serenity::{
     prelude::GatewayIntents,
     Result as SerenityResult,
 };
+use songbird::ffmpeg;
 
 struct Handler;
 
@@ -136,10 +137,10 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
 
     let _handler = manager.join(guild_id, connect_to).await;
 
-    let url = format!("{}/echo", BASE_URL);
+    /*let url = format!("{}/echo", BASE_URL);
     let result = reqwest::Client::new().post(&url).body("example").send().await?.text().await?;
     println!("{}", url);
-    println!("{}", result);
+    println!("{}", result);*/
     Ok(())
 }
 

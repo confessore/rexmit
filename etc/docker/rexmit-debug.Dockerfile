@@ -45,8 +45,9 @@ CMD ["rexmit-actix"]
 
 FROM base AS serenity-base
 RUN apt update &&  \
-    apt install -y libssl-dev pkg-config libopus-dev ffmpeg youtube-dl && \
+    apt install -y  git pip libssl-dev pkg-config libopus-dev ffmpeg youtube-dl && \
     rm -rf /var/lib/apt/lists/*
+RUN pip install 'git+https://github.com/ytdl-org/youtube-dl.git@master#egg=youtube_dl'
 WORKDIR /
 
 
