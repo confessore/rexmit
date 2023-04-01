@@ -1,6 +1,5 @@
 # rexmit
 
-
 follow these instructions to deploy rexmit
 
 ## requirements
@@ -11,47 +10,22 @@ follow these instructions to deploy rexmit
 
 - cmake (only if you require rust-analyzer for dev)
 
-- some operating systems may require modifying `/etc/hosts`
-    ```
-    127.0.0.1       localhost       www.localhost   api.localhost
-    ```
-
-- if you're on a mac, airplay receiver uses port 5000.
-    you can disable airplay receiver by navigating to system preferences > sharing > uncheck airplay receiver
-
 ## installation
-
-- please note that subsequent builds will be significantly less time consuming thanks to layer caching
-- initial build on an apple m1 is ~6min
-- successive builds are ~2min
 
 1. clone this repository
 
 2. change directory to this repository
 
-3. enter environment variables
-    ```
-    chmod +x scripts/define-secrets.sh
+3. create an .env file from .env.example
 
-    scripts/define-secrets.sh
+4. build the image
     ```
-    ```
-    example:
-        postgres-user = postgres
-        postgres-password = postgres
-        discord-token = <token>
+    docker build -t rexmit .
     ```
 
-4. create required docker volumes
+5. run the container
     ```
-    docker volume create rexmit-redis
-    
-    docker volume create rexmit-postgres
-    ```
-
-5. orchestrate the composition
-    ```
-    docker compose -f docker-compose-debug.yml up -d --build
+    docker run --env-file .env -d rexmit
     ```
 
 6. rexmit will connect to discord and be ready for guild invitations
@@ -62,16 +36,3 @@ follow these instructions to deploy rexmit
     ~leave
     ~play https://www.youtube.com/watch?v=jfKfPfyJRdk
     ```
-
-## features
-- actix for backend api
-
-- serenity with songbird for discord
-
-- yew for frontend api
-
-- nginx for http/https
-
-- postgres for sql storage
-
-- redis for caching
