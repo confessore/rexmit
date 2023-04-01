@@ -1,7 +1,31 @@
-[workspace]
-members = [
-    "src/rexmit",
-    "src/rexmit-actix",
-    "src/rexmit-serenity",
-    "src/rexmit-yew"
-]
+[package]
+name = "rexmit"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tracing = "0.1"
+tracing-subscriber = "0.2"
+tracing-futures = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.11", features = ["json"] }
+bcrypt = "0.10"
+
+[dependencies.diesel]
+version = "2"
+features = ["postgres"]
+
+[dependencies.songbird]
+git = "https://github.com/serenity-rs/songbird"
+branch = "current"
+
+[dependencies.serenity]
+version = "0.11"
+features = ["client", "standard_framework", "voice", "rustls_backend"]
+
+[dependencies.tokio]
+version = "1.21.2"
+features = ["macros", "rt-multi-thread", "signal"]
