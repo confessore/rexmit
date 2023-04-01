@@ -8,7 +8,6 @@
 //! ```
 use std::env;
 use std::fs;
-use rexmit::Transmission;
 
 // This trait adds the `register_songbird` and `register_songbird_with` methods
 // to the client builder below, making it easy to install this voice client.
@@ -32,10 +31,9 @@ use serenity::{
     prelude::GatewayIntents,
     Result as SerenityResult,
 };
+use songbird::ffmpeg;
 
 struct Handler;
-
-const BASE_URL: &str = "http://rexmit-actix:5000";
 
 #[async_trait]
 impl EventHandler for Handler {
@@ -53,12 +51,11 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     // Configure the client with your Discord bot token in the environment.
-    let path = env::var("APPLICATION__DISCORDOPTIONS__TOKEN").expect("Expected a token in the environment");
-    let token = fs::read_to_string(path).expect("should have been a file path");
+    let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
     let framework = StandardFramework::new()
         .configure(|c| c
-                   .prefix("~"))
+        .prefix("~"))
         .group(&GENERAL_GROUP);
 
     let intents = GatewayIntents::non_privileged()
@@ -136,10 +133,10 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
 
     let _handler = manager.join(guild_id, connect_to).await;
 
-    let url = format!("{}/echo", BASE_URL);
+    /*let url = format!("{}/echo", BASE_URL);
     let result = reqwest::Client::new().post(&url).body("example").send().await?.text().await?;
     println!("{}", url);
-    println!("{}", result);
+    println!("{}", result);*/
     Ok(())
 }
 

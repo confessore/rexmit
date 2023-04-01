@@ -389,3 +389,5 @@ Cargo.lock
 
 # dir
 secrets/*
+.env.local
+.env
