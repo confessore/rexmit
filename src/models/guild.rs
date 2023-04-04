@@ -11,7 +11,8 @@ use serde::{
 pub struct Guild {
     pub id: String,
     pub name: String,
-    pub subscribed: bool
+    pub subscribed: bool,
+    pub expiration: i64
 }
 
 impl Guild {

@@ -8,12 +8,11 @@ use serde::{
 };
 
 #[derive(Identifiable, Queryable, Serialize, Deserialize)]
-pub struct Guild {
+pub struct Queue {
     pub id: String,
-    pub name: String,
-    pub subscribed: bool
+
 }
 
-impl Guild {
+impl Queue {
 
 }

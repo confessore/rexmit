@@ -1,20 +1,20 @@
 use crate::{
-    schema::transmissions::{self, dsl::*}
+    schema::sources::{self, dsl::*}
 };
 use diesel::prelude::*;
 use serde::{
     Serialize,
     Deserialize
 };
+use songbird::Input;
 
 #[derive(Identifiable, Queryable, Serialize, Deserialize)]
-pub struct Transmission {
+pub struct Source {
     pub id: String,
-    pub href: String,
-    pub initially_played: i64,
-    pub last_played: i64
+    pub input: Input,
+    
 }
 
-impl Transmission {
-
+impl Source {
+ 
 }

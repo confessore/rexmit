@@ -5,11 +5,19 @@ table! {
         id -> Varchar,
         name -> Varchar,
         subscribed -> Bool
+        expiration -> Int8
     }
 }
 
 table! {
     queues (id) {
+        id -> Varchar,
+
+    }
+}
+
+table! {
+    sources (id) {
         id -> Varchar,
         
     }
