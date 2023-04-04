@@ -33,6 +33,7 @@ use serenity::{
 };
 use songbird::ffmpeg;
 
+
 struct Handler;
 
 #[async_trait]
@@ -49,6 +50,9 @@ struct General;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
+
+    dotenv::dotenv().ok();
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
     // Configure the client with your Discord bot token in the environment.
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");

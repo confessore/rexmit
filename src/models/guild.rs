@@ -1,6 +1,4 @@
-use crate::{
-    schema::guilds::{self, dsl::*}
-};
+use crate::schema::guilds::{self, dsl::*};
 use diesel::prelude::*;
 use serde::{
     Serialize,
