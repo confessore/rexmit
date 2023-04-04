@@ -245,7 +245,37 @@ async fn play(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
         check_msg(msg.channel_id.say(&ctx.http, "Playing song").await);
     } else {
-        check_msg(msg.channel_id.say(&ctx.http, "Not in a voice channel to play in").await);
+        check_msg(msg.channel_id.say(&ctx.http, "Not in a voice channel to play in. Joining channel.").await);
+        match join(ctx, msg, args).await {
+            Ok(result) => {
+                // args is moved already so it cannot be referenced again
+                // because that reference no longer exists
+                // unless the copy trait is applied but it is not so we do something else
+                if let Some(handler_lock) = manager.get(guild_id) {
+                    let mut handler = handler_lock.lock().await;
+            
+                    let source = match songbird::ytdl(&url).await {
+                        Ok(source) => source,
+                        Err(why) => {
+                            println!("Err starting source: {:?}", why);
+            
+                            check_msg(msg.channel_id.say(&ctx.http, "Error sourcing ffmpeg").await);
+            
+                            return Ok(());
+                        },
+                    };
+            
+                    handler.play_source(source);
+            
+                    check_msg(msg.channel_id.say(&ctx.http, "Playing song").await);
+                } else {
+                    check_msg(msg.channel_id.say(&ctx.http, "no win scenario!").await);
+                }
+            },
+            Err(why) => {
+                return Ok(());
+            }
+        };
     }
 
     Ok(())

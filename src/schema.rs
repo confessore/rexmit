@@ -1,6 +1,21 @@
 use diesel::table;
 
 table! {
+    guilds (id) {
+        id -> Varchar,
+        name -> Varchar,
+        subscribed -> Bool
+    }
+}
+
+table! {
+    queues (id) {
+        id -> Varchar,
+        
+    }
+}
+
+table! {
     transmissions (id) {
         id -> Varchar,
         href -> Varchar,
