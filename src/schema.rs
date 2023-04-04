@@ -4,8 +4,8 @@ table! {
     guilds (id) {
         id -> Varchar,
         name -> Varchar,
-        subscribed -> Bool
-        expiration -> Int8
+        subscribed -> Bool,
+        expiration -> Int8,
     }
 }
 

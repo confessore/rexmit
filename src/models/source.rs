@@ -6,12 +6,11 @@ use serde::{
     Serialize,
     Deserialize
 };
-use songbird::Input;
+use songbird::input::Input;
 
 #[derive(Identifiable, Queryable, Serialize, Deserialize)]
 pub struct Source {
     pub id: String,
-    pub input: Input,
     
 }
 
