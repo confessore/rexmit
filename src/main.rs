@@ -8,6 +8,18 @@
 //! ```
 use std::env;
 use std::fs;
+use mongodb::bson::Document;
+use mongodb::bson::doc;
+use mongodb::options;
+use mongodb::options::CountOptions;
+use mongodb::options::DatabaseOptions;
+use mongodb::options::ListDatabasesOptions;
+use mongodb::{
+    {
+        Client as MongoClient,
+        Collection
+    }
+};
 
 // This trait adds the `register_songbird` and `register_songbird_with` methods
 // to the client builder below, making it easy to install this voice client.
@@ -52,10 +64,23 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     dotenv::dotenv().ok();
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+    let database_url = std::env::var("DATABASE_URL").expect("Expected a database url in the environment");
+    let wrapped_client = MongoClient::with_uri_str(database_url).await;
+
+    let databases = wrapped_client.unwrap().list_databases(None, None).await;
+    for database in databases.unwrap() {
+        println!("{}", database.name);
+    }
+
+
+    /*let collection: Collection<Document> = db.collection("guilds");
+    let filter = doc! {  };
+    let options = CountOptions::builder().build();
+    println!("{:?}", collection.count_documents(filter, options).await);*/
 
     // Configure the client with your Discord bot token in the environment.
-    let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
+    let token = std::env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
     let framework = StandardFramework::new()
         .configure(|c| c
@@ -75,7 +100,6 @@ async fn main() {
     tokio::spawn(async move {
         let _ = client.start().await.map_err(|why| println!("Client ended: {:?}", why));
     });
-    
     tokio::signal::ctrl_c().await;
     println!("Received Ctrl-C, shutting down.");
 }

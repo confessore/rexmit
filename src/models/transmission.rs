@@ -1,13 +1,9 @@
-use crate::{
-    schema::transmissions::{self, dsl::*}
-};
-use diesel::prelude::*;
 use serde::{
     Serialize,
     Deserialize
 };
 
-#[derive(Identifiable, Queryable, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Transmission {
     pub id: String,
     pub href: String,
