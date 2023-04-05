@@ -21,6 +21,7 @@ use mongodb::{
     }
 };
 
+use rexmit::models::guild::Guild;
 // This trait adds the `register_songbird` and `register_songbird_with` methods
 // to the client builder below, making it easy to install this voice client.
 // The voice client can be retrieved in any command using `songbird::get(ctx).await`.
@@ -56,7 +57,7 @@ impl EventHandler for Handler {
 }
 
 #[group]
-#[commands(deafen, join, leave, mute, play, ping, undeafen, unmute)]
+#[commands(deafen, join, stop, s, mute, play, p, ping, undeafen, unmute)]
 struct General;
 
 #[tokio::main]
@@ -65,19 +66,22 @@ async fn main() {
 
     dotenv::dotenv().ok();
 
-    let database_url = std::env::var("DATABASE_URL").expect("Expected a database url in the environment");
+    /*let database_url = std::env::var("DATABASE_URL").expect("Expected a database url in the environment");
     let wrapped_client = MongoClient::with_uri_str(database_url).await;
-
-    let databases = wrapped_client.unwrap().list_databases(None, None).await;
-    for database in databases.unwrap() {
-        println!("{}", database.name);
-    }
+    let db = wrapped_client.unwrap().database("rexmit");
+    let collection: Collection<Guild> = db.collection("guilds");
+    let guild = Guild::new("cupcake");
+    println!("{}", collection.name());
+    let result = collection.insert_one(guild, None).await;
+    //let databases = wrapped_client.unwrap().list_databases(None, None).await;*/
 
 
     /*let collection: Collection<Document> = db.collection("guilds");
     let filter = doc! {  };
     let options = CountOptions::builder().build();
     println!("{:?}", collection.count_documents(filter, options).await);*/
+
+
 
     // Configure the client with your Discord bot token in the environment.
     let token = std::env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
@@ -170,7 +174,7 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 #[only_in(guilds)]
-async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
+async fn stop(ctx: &Context, msg: &Message) -> CommandResult {
     let guild = msg.guild(&ctx.cache).unwrap();
     let guild_id = guild.id;
 
@@ -183,13 +187,20 @@ async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
             check_msg(msg.channel_id.say(&ctx.http, format!("Failed: {:?}", e)).await);
         }
 
-        check_msg(msg.channel_id.say(&ctx.http, "Left voice channel").await);
+        check_msg(msg.channel_id.say(&ctx.http, "stopped").await);
     } else {
         check_msg(msg.reply(ctx, "Not in a voice channel").await);
     }
 
     Ok(())
 }
+
+#[command]
+#[only_in(guilds)]
+async fn s(ctx: &Context, msg: &Message) -> CommandResult {
+    return stop(ctx, msg, _args).await;
+}
+
 
 #[command]
 #[only_in(guilds)]
@@ -229,6 +240,12 @@ async fn ping(context: &Context, msg: &Message) -> CommandResult {
     check_msg(msg.channel_id.say(&context.http, "Pong!").await);
 
     Ok(())
+}
+
+#[command]
+#[only_in(guilds)]
+async fn p(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    return play(ctx, msg, args).await;
 }
 
 #[command]

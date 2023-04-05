@@ -12,5 +12,7 @@ pub struct Guild {
 }
 
 impl Guild {
-
+    pub fn new(name: &str) -> Guild {
+        Guild { name: String::from(name), id: String::from(""), subscribed: false, expiration: 0 }
+    }
 }
