@@ -2,7 +2,7 @@ FROM debian:bullseye-slim AS rexmit-base
 RUN apt update &&  \
     apt install -y git pip libssl-dev pkg-config libopus-dev ffmpeg && \
     rm -rf /var/lib/apt/lists/*
-RUN pip install 'git+https://github.com/ytdl-org/youtube-dl.git@master#egg=youtube_dl'
+RUN pip install yt-dlp
 WORKDIR /
 
 
@@ -10,7 +10,7 @@ FROM rust AS rexmit-builder-base
 RUN apt update &&  \
     apt install -y git pip libssl-dev pkg-config libopus-dev ffmpeg && \
     rm -rf /var/lib/apt/lists/*
-RUN pip install 'git+https://github.com/ytdl-org/youtube-dl.git@master#egg=youtube_dl'
+RUN pip install yt-dlp
 WORKDIR /
 
 

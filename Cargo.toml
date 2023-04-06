@@ -19,6 +19,7 @@ mongodb = "2.1.0"
 [dependencies.songbird]
 git = "https://github.com/serenity-rs/songbird"
 branch = "current"
+features = ["yt-dlp"]
 
 [dependencies.serenity]
 version = "0.11"
