@@ -8,7 +8,20 @@
 //! ```
 use std::env;
 use std::fs;
+use mongodb::bson::Document;
+use mongodb::bson::doc;
+use mongodb::options;
+use mongodb::options::CountOptions;
+use mongodb::options::DatabaseOptions;
+use mongodb::options::ListDatabasesOptions;
+use mongodb::{
+    {
+        Client as MongoClient,
+        Collection
+    }
+};
 
+use rexmit::models::guild::Guild;
 // This trait adds the `register_songbird` and `register_songbird_with` methods
 // to the client builder below, making it easy to install this voice client.
 // The voice client can be retrieved in any command using `songbird::get(ctx).await`.
@@ -33,6 +46,7 @@ use serenity::{
 };
 use songbird::ffmpeg;
 
+
 struct Handler;
 
 #[async_trait]
@@ -43,15 +57,34 @@ impl EventHandler for Handler {
 }
 
 #[group]
-#[commands(deafen, join, leave, mute, play, ping, undeafen, unmute)]
+#[commands(deafen, join, stop, s, mute, play, p, ping, undeafen, unmute)]
 struct General;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
 
+    dotenv::dotenv().ok();
+
+    /*let database_url = std::env::var("DATABASE_URL").expect("Expected a database url in the environment");
+    let wrapped_client = MongoClient::with_uri_str(database_url).await;
+    let db = wrapped_client.unwrap().database("rexmit");
+    let collection: Collection<Guild> = db.collection("guilds");
+    let guild = Guild::new("cupcake");
+    println!("{}", collection.name());
+    let result = collection.insert_one(guild, None).await;
+    //let databases = wrapped_client.unwrap().list_databases(None, None).await;*/
+
+
+    /*let collection: Collection<Document> = db.collection("guilds");
+    let filter = doc! {  };
+    let options = CountOptions::builder().build();
+    println!("{:?}", collection.count_documents(filter, options).await);*/
+
+
+
     // Configure the client with your Discord bot token in the environment.
-    let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
+    let token = std::env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
 
     let framework = StandardFramework::new()
         .configure(|c| c
@@ -71,7 +104,6 @@ async fn main() {
     tokio::spawn(async move {
         let _ = client.start().await.map_err(|why| println!("Client ended: {:?}", why));
     });
-    
     tokio::signal::ctrl_c().await;
     println!("Received Ctrl-C, shutting down.");
 }
@@ -142,7 +174,7 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 #[only_in(guilds)]
-async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
+async fn stop(ctx: &Context, msg: &Message) -> CommandResult {
     let guild = msg.guild(&ctx.cache).unwrap();
     let guild_id = guild.id;
 
@@ -155,13 +187,20 @@ async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
             check_msg(msg.channel_id.say(&ctx.http, format!("Failed: {:?}", e)).await);
         }
 
-        check_msg(msg.channel_id.say(&ctx.http, "Left voice channel").await);
+        check_msg(msg.channel_id.say(&ctx.http, "stopped").await);
     } else {
         check_msg(msg.reply(ctx, "Not in a voice channel").await);
     }
 
     Ok(())
 }
+
+#[command]
+#[only_in(guilds)]
+async fn s(ctx: &Context, msg: &Message) -> CommandResult {
+    return stop(ctx, msg, _args).await;
+}
+
 
 #[command]
 #[only_in(guilds)]
@@ -201,6 +240,12 @@ async fn ping(context: &Context, msg: &Message) -> CommandResult {
     check_msg(msg.channel_id.say(&context.http, "Pong!").await);
 
     Ok(())
+}
+
+#[command]
+#[only_in(guilds)]
+async fn p(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    return play(ctx, msg, args).await;
 }
 
 #[command]
@@ -245,7 +290,37 @@ async fn play(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
         check_msg(msg.channel_id.say(&ctx.http, "Playing song").await);
     } else {
-        check_msg(msg.channel_id.say(&ctx.http, "Not in a voice channel to play in").await);
+        check_msg(msg.channel_id.say(&ctx.http, "Not in a voice channel to play in. Joining channel.").await);
+        match join(ctx, msg, args).await {
+            Ok(result) => {
+                // args is moved already so it cannot be referenced again
+                // because that reference no longer exists
+                // unless the copy trait is applied but it is not so we do something else
+                if let Some(handler_lock) = manager.get(guild_id) {
+                    let mut handler = handler_lock.lock().await;
+            
+                    let source = match songbird::ytdl(&url).await {
+                        Ok(source) => source,
+                        Err(why) => {
+                            println!("Err starting source: {:?}", why);
+            
+                            check_msg(msg.channel_id.say(&ctx.http, "Error sourcing ffmpeg").await);
+            
+                            return Ok(());
+                        },
+                    };
+            
+                    handler.play_source(source);
+            
+                    check_msg(msg.channel_id.say(&ctx.http, "Playing song").await);
+                } else {
+                    check_msg(msg.channel_id.say(&ctx.http, "no win scenario!").await);
+                }
+            },
+            Err(why) => {
+                return Ok(());
+            }
+        };
     }
 
     Ok(())
