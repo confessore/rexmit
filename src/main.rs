@@ -183,14 +183,14 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
 
         let send_http = ctx.http.clone();
 
-        handle.add_global_event(
+        /*handle.add_global_event(
             Event::Periodic(Duration::from_secs(60), None),
             ChannelDurationNotifier {
                 chan_id,
                 count: Default::default(),
                 http: send_http,
             },
-        );
+        );*/
     } else {
         check_msg(
             msg.channel_id
@@ -457,6 +457,7 @@ impl VoiceEventHandler for SongEndNotifier {
 #[command]
 #[only_in(guilds)]
 async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let og_args = args.clone();
     let url = match args.single::<String>() {
         Ok(url) => url,
         Err(_) => {
@@ -520,6 +521,34 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 .say(&ctx.http, "Not in a voice channel to play in")
                 .await,
         );
+        match join(ctx, msg, og_args.clone()).await {
+            Ok(result) => {
+                /*check_msg(
+                    msg.channel_id
+                        .say(&ctx.http, og_args.clone().single::<String>().unwrap())
+                        .await,
+                );*/
+                match queue(ctx, msg, og_args.clone()).await {
+                    Ok(result) => result,
+                    Err(_why) => {
+                        check_msg(
+                            msg.channel_id
+                                .say(&ctx.http, "unable to queue")
+                                .await,
+                        );
+                    }
+                }
+                return Ok(result);
+            },
+            Err(_why) => {
+                check_msg(
+                    msg.channel_id
+                        .say(&ctx.http, "unable to join")
+                        .await,
+                );
+                return Ok(());
+            }
+        }
     }
 
     Ok(())
