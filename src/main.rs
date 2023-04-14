@@ -58,7 +58,7 @@ impl EventHandler for Handler {
 
 #[group]
 #[commands(
-    deafen, join, leave, mute, play_fade, queue, skip, stop, ping, undeafen, unmute
+    deafen, join, leave, mute, q, queue, s, skip, c, clear, stop, ping, undeafen, unmute
 )]
 struct General;
 
@@ -456,6 +456,12 @@ impl VoiceEventHandler for SongEndNotifier {
 
 #[command]
 #[only_in(guilds)]
+async fn q(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    return queue(ctx, msg, args).await;
+}
+
+#[command]
+#[only_in(guilds)]
 async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let og_args = args.clone();
     let url = match args.single::<String>() {
@@ -556,6 +562,12 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
 #[command]
 #[only_in(guilds)]
+async fn s(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return skip(ctx, msg, _args).await;
+}
+
+#[command]
+#[only_in(guilds)]
 async fn skip(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let guild = msg.guild(&ctx.cache).unwrap();
     let guild_id = guild.id;
@@ -587,6 +599,18 @@ async fn skip(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     }
 
     Ok(())
+}
+
+#[command]
+#[only_in(guilds)]
+async fn c(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return stop(ctx, msg, _args).await;
+}
+
+#[command]
+#[only_in(guilds)]
+async fn clear(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return stop(ctx, msg, _args).await;
 }
 
 #[command]
