@@ -30,7 +30,7 @@ use serenity::{
         StandardFramework,
     },
     http::Http,
-    model::{channel::Message, gateway::Ready, prelude::ChannelId},
+    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity}},
     prelude::{GatewayIntents, Mentionable},
     Result as SerenityResult,
 };
@@ -51,7 +51,8 @@ struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn ready(&self, _: Context, ready: Ready) {
+    async fn ready(&self, ctx: Context, ready: Ready) {
+        ctx.set_activity(Activity::listening("~q <youtube url>")).await;
         println!("{} is connected!", ready.user.name);
     }
 }
