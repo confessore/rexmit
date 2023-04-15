@@ -34,5 +34,12 @@ follow these instructions to deploy rexmit
     ```
     ~join
     ~leave
-    ~play https://www.youtube.com/watch?v=jfKfPfyJRdk
+    ~mute
+    ~q https://www.youtube.com/watch?v=jfKfPfyJRdk
+    ~queue https://www.youtube.com/watch?v=jfKfPfyJRdk
+    ~s
+    ~skip
+    ~stop
+    ~c
+    ~clear
     ```
