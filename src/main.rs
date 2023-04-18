@@ -168,21 +168,21 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                 .await,
         );
 
-        let chan_id = msg.channel_id;
+        //let chan_id = msg.channel_id;
 
-        let send_http = ctx.http.clone();
+        //let send_http = ctx.http.clone();
 
-        let mut handle = handle_lock.lock().await;
+        //let mut handle = handle_lock.lock().await;
 
-        handle.add_global_event(
+        /*handle.add_global_event(
             Event::Track(TrackEvent::End),
             TrackEndNotifier {
                 chan_id,
                 http: send_http,
             },
-        );
+        );*/
 
-        let send_http = ctx.http.clone();
+        //let send_http = ctx.http.clone();
 
         /*handle.add_global_event(
             Event::Periodic(Duration::from_secs(60), None),
