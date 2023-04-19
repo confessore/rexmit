@@ -168,19 +168,19 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                 .await,
         );
 
-        //let chan_id = msg.channel_id;
+        let chan_id = msg.channel_id;
 
-        //let send_http = ctx.http.clone();
+        let send_http = ctx.http.clone();
 
-        //let mut handle = handle_lock.lock().await;
+        let mut handle = handle_lock.lock().await;
 
-        /*handle.add_global_event(
+        handle.add_global_event(
             Event::Track(TrackEvent::End),
             TrackEndNotifier {
                 chan_id,
                 http: send_http,
             },
-        );*/
+        );
 
         //let send_http = ctx.http.clone();
 
@@ -214,7 +214,7 @@ impl VoiceEventHandler for TrackEndNotifier {
         if let EventContext::Track(track_list) = ctx {
             check_msg(
                 self.chan_id
-                    .say(&self.http, &format!("Tracks ended: {}.", track_list.len()))
+                    .say(&self.http, &format!("Track ended: {}.", track_list.first().as_ref().unwrap().1.metadata().source_url.as_ref().unwrap()))
                     .await,
             );
         }
