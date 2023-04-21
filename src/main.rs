@@ -18,6 +18,11 @@ use std::{
     time::Duration,
 };
 
+use mongodb::{
+    Client as MongoClient,
+    Collection, bson::doc
+};
+use rexmit::models::guild::Guild;
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler},
@@ -32,7 +37,7 @@ use serenity::{
     http::Http,
     model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity}},
     prelude::{GatewayIntents, Mentionable},
-    Result as SerenityResult,
+    Result as SerenityResult, futures::stream::Collect,
 };
 
 use songbird::{
@@ -44,7 +49,7 @@ use songbird::{
     EventContext,
     EventHandler as VoiceEventHandler,
     SerenityInit,
-    TrackEvent,
+    TrackEvent, id::GuildId,
 };
 
 struct Handler;
@@ -66,7 +71,11 @@ struct General;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
+
+
+
     let debug = env::var("DEBUG").expect("Expected a DEBUG == to 1 or 0 in the environment");
+
     // Configure the client with your Discord bot token in the environment.
     let token = env::var("DISCORD_TOKEN").expect("Expected a DISCORD_TOKEN in the environment");
 
@@ -214,7 +223,7 @@ impl VoiceEventHandler for TrackEndNotifier {
         if let EventContext::Track(track_list) = ctx {
             check_msg(
                 self.chan_id
-                    .say(&self.http, &format!("Track ended: {}.", track_list.first().as_ref().unwrap().1.metadata().source_url.as_ref().unwrap()))
+                    .say(&self.http, &format!("Track ended: {}", track_list.first().as_ref().unwrap().1.metadata().source_url.as_ref().unwrap()))
                     .await,
             );
         }
@@ -558,6 +567,40 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         }
     }
 
+    let database_url = std::env::var("DATABASE_URL").expect("Expected a database url in the environment");
+    let wrapped_client = MongoClient::with_uri_str(database_url).await;
+    let db = wrapped_client.unwrap().database("rexmit");
+    let collection: Collection<Guild> = db.collection("guilds");
+    let guild_id = msg.guild_id.unwrap().0;
+    let http_guild = ctx.http.get_guild(guild_id).await;
+    let partial_guild = http_guild.unwrap();
+    let guild = Guild::new(guild_id.to_string(), partial_guild.clone().name);
+    println!("{}", collection.name());
+    let result = collection.find_one_and_update(doc! { "id": guild_id.to_string() }, doc! { "$set": { "id": guild_id.to_string(), "name": partial_guild.clone().name }}, None).await;
+    println!("{:?}", result);
+    match &result {
+        Ok(option) => {
+            match &option {
+                Some(guild) => {
+                    println!("{:?}", guild);
+                },
+                None => {
+                    let result = collection.insert_one(guild, None).await;
+                    println!("{:?}", result)
+                }
+            }
+        },
+        Err(why) => {
+            println!("{}", why)
+        }
+    }
+    //let databases = wrapped_client.unwrap().list_databases(None, None).await;*/
+
+    /*let collection: Collection<Document> = db.collection("guilds");
+    let filter = doc! {  };
+    let options = CountOptions::builder().build();
+    println!("{:?}", collection.count_documents(filter, options).await);*/
+
     Ok(())
 }
 
@@ -565,7 +608,7 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 #[only_in(guilds)]
 async fn s(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     return skip(ctx, msg, _args).await;
-}
+} 
 
 #[command]
 #[only_in(guilds)]
