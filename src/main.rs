@@ -574,7 +574,7 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             guild.queue.push(track_handle.metadata().source_url.clone().unwrap())
         }
         
-        let result = collection.find_one_and_replace(doc! { "id": &guild_id.to_string() }, &guild, None).await;
+        let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "queue": &guild.queue }}, None).await;
 
         println!("{:?}", result);
         match &result {
