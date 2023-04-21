@@ -25,7 +25,7 @@ use mongodb::{
 use rexmit::models::guild::Guild;
 use serenity::{
     async_trait,
-    client::{Client, Context, EventHandler},
+    client::{Client, Context, EventHandler, Cache},
     framework::{
         standard::{
             macros::{command, group},
@@ -61,7 +61,7 @@ impl EventHandler for Handler {
         println!("{} is connected!", ready.user.name);
     }
 
-    async fn voice_state_update(&self, _ctx: Context, _old: Option<VoiceState>, _new: VoiceState) {
+    /*async fn voice_state_update(&self, _ctx: Context, _old: Option<VoiceState>, _new: VoiceState) {
         let channel_result = _ctx.http.get_channel(_new.channel_id.unwrap().into()).await;
         match channel_result.unwrap().guild() {
             Some(guild_channel) => {
@@ -79,7 +79,7 @@ impl EventHandler for Handler {
                 println!("{}", "no guild")
             }
         };
-    }
+    }*/
 }
 
 #[group]
@@ -255,6 +255,19 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
             TrackEndNotifier {
                 chan_id,
                 http: send_http,
+            },
+        );
+
+        let send_http = ctx.http.clone();
+        let send_cache = ctx.cache.clone();
+
+        handle.add_global_event(
+            Event::Periodic(Duration::from_secs(15), None),
+            Periodic {
+                voice_chan_id: connect_to,
+                chan_id,
+                http: send_http,
+                cache: send_cache
             },
         );
     } else {
@@ -507,6 +520,31 @@ impl VoiceEventHandler for SongEndNotifier {
                 .say(&self.http, "Song faded out completely!")
                 .await,
         );
+
+        None
+    }
+}
+
+struct Periodic {
+    voice_chan_id: ChannelId,
+    chan_id: ChannelId,
+    http: Arc<Http>,
+    cache: Arc<Cache>,
+}
+
+#[async_trait]
+impl VoiceEventHandler for Periodic {
+    async fn act(&self, _ctx: &EventContext<'_>) -> Option<Event> {
+        let channel = self.http.get_channel(self.voice_chan_id.into()).await;
+        match channel.unwrap().guild() {
+            Some(guild_channel) => {
+                let members = guild_channel.members(&self.cache).await;
+                println!("{}", members.unwrap().len())
+            },
+            None => {
+                println!("{}", "channel was none")
+            }
+        }
 
         None
     }
