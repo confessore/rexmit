@@ -20,7 +20,7 @@ use std::{
 
 use mongodb::{
     Client as MongoClient,
-    Collection, bson::doc
+    Collection, bson::{doc, Bson}
 };
 use rexmit::models::guild::Guild;
 use serenity::{
@@ -64,7 +64,7 @@ impl EventHandler for Handler {
 
 #[group]
 #[commands(
-    deafen, join, leave, mute, q, queue, s, skip, c, clear, stop, ping, undeafen, unmute
+    d, deafen, j, join, l, leave, m, mute, q, queue, s, skip, c, clear, stop, p, ping, ud, undeafen, um, unmute
 )]
 struct General;
 
@@ -106,7 +106,12 @@ async fn main() {
 }
 
 #[command]
-async fn deafen(ctx: &Context, msg: &Message) -> CommandResult {
+async fn d(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return deafen(ctx, msg, _args).await;
+}
+
+#[command]
+async fn deafen(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let guild = msg.guild(&ctx.cache).unwrap();
     let guild_id = guild.id;
 
@@ -141,6 +146,12 @@ async fn deafen(ctx: &Context, msg: &Message) -> CommandResult {
     }
 
     Ok(())
+}
+
+#[command]
+#[only_in(guilds)]
+async fn j(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return join(ctx, msg, _args).await;
 }
 
 #[command]
@@ -260,7 +271,13 @@ impl VoiceEventHandler for ChannelDurationNotifier {
 
 #[command]
 #[only_in(guilds)]
-async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
+async fn l(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return leave(ctx, msg, _args).await;
+}
+
+#[command]
+#[only_in(guilds)]
+async fn leave(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let guild = msg.guild(&ctx.cache).unwrap();
     let guild_id = guild.id;
 
@@ -285,6 +302,12 @@ async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
     }
 
     Ok(())
+}
+
+#[command]
+#[only_in(guilds)]
+async fn m(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return mute(ctx, msg, _args).await;
 }
 
 #[command]
@@ -324,6 +347,12 @@ async fn mute(ctx: &Context, msg: &Message) -> CommandResult {
     }
 
     Ok(())
+}
+
+#[command]
+#[only_in(guilds)]
+async fn p(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return ping(ctx, msg, _args).await;
 }
 
 #[command]
@@ -531,6 +560,39 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 )
                 .await,
         );
+
+        let database_url = std::env::var("DATABASE_URL").expect("Expected a database url in the environment");
+        let wrapped_client = MongoClient::with_uri_str(database_url).await;
+        let db = wrapped_client.unwrap().database("rexmit");
+        let collection: Collection<Guild> = db.collection("guilds");
+        let guild_id = msg.guild_id.unwrap().0;
+        let http_guild = ctx.http.get_guild(guild_id).await;
+        let partial_guild = http_guild.unwrap();
+        let mut guild = Guild::new(guild_id.to_string(), partial_guild.clone().name);
+
+        for track_handle in handler.queue().current_queue() {
+            guild.queue.push(track_handle.metadata().source_url.clone().unwrap())
+        }
+        
+        let result = collection.find_one_and_replace(doc! { "id": &guild_id.to_string() }, &guild, None).await;
+
+        println!("{:?}", result);
+        match &result {
+            Ok(option) => {
+                match &option {
+                    Some(guild) => {
+                        println!("{:?}", guild);
+                    }, 
+                    None => {
+                        let result = collection.insert_one(&guild, None).await;
+                        println!("{:?}", result)
+                    }
+                }
+            },
+            Err(why) => {
+                println!("{}", why)
+            }
+        }
     } else {
         check_msg(
             msg.channel_id
@@ -566,34 +628,6 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             }
         }
     }
-
-    let database_url = std::env::var("DATABASE_URL").expect("Expected a database url in the environment");
-    let wrapped_client = MongoClient::with_uri_str(database_url).await;
-    let db = wrapped_client.unwrap().database("rexmit");
-    let collection: Collection<Guild> = db.collection("guilds");
-    let guild_id = msg.guild_id.unwrap().0;
-    let http_guild = ctx.http.get_guild(guild_id).await;
-    let partial_guild = http_guild.unwrap();
-    let guild = Guild::new(guild_id.to_string(), partial_guild.clone().name);
-    println!("{}", collection.name());
-    let result = collection.find_one_and_update(doc! { "id": guild_id.to_string() }, doc! { "$set": { "id": guild_id.to_string(), "name": partial_guild.clone().name }}, None).await;
-    println!("{:?}", result);
-    match &result {
-        Ok(option) => {
-            match &option {
-                Some(guild) => {
-                    println!("{:?}", guild);
-                },
-                None => {
-                    let result = collection.insert_one(guild, None).await;
-                    println!("{:?}", result)
-                }
-            }
-        },
-        Err(why) => {
-            println!("{}", why)
-        }
-    }
     //let databases = wrapped_client.unwrap().list_databases(None, None).await;*/
 
     /*let collection: Collection<Document> = db.collection("guilds");
@@ -603,6 +637,7 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
     Ok(())
 }
+
 
 #[command]
 #[only_in(guilds)]
@@ -687,6 +722,12 @@ async fn stop(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
 #[command]
 #[only_in(guilds)]
+async fn ud(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return undeafen(ctx, msg, _args).await;
+}
+
+#[command]
+#[only_in(guilds)]
 async fn undeafen(ctx: &Context, msg: &Message) -> CommandResult {
     let guild = msg.guild(&ctx.cache).unwrap();
     let guild_id = guild.id;
@@ -716,6 +757,12 @@ async fn undeafen(ctx: &Context, msg: &Message) -> CommandResult {
     }
 
     Ok(())
+}
+
+#[command]
+#[only_in(guilds)]
+async fn um(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return unmute(ctx, msg, _args).await;
 }
 
 #[command]
