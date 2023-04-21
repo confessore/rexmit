@@ -8,11 +8,12 @@ pub struct Guild {
     pub name: String,
     pub subscribed: bool,
     pub expiration: i64,
+    pub joined: bool,
     pub queue: Vec<String>,
 }
 
 impl Guild {
-    pub fn new(id: String, name: String) -> Guild {
-        Guild { id, name, subscribed: false, expiration: 0, ..Default::default()  }
+    pub fn new(id: String, name: String, joined: bool) -> Guild {
+        Guild { id, name, ..Default::default()  }
     }
 } 

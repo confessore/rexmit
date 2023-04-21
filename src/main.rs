@@ -35,7 +35,7 @@ use serenity::{
         StandardFramework,
     },
     http::Http,
-    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity}},
+    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity, GuildId, VoiceState}},
     prelude::{GatewayIntents, Mentionable},
     Result as SerenityResult, futures::stream::Collect,
 };
@@ -49,7 +49,7 @@ use songbird::{
     EventContext,
     EventHandler as VoiceEventHandler,
     SerenityInit,
-    TrackEvent, id::GuildId,
+    TrackEvent, events::context_data::VoiceData,
 };
 
 struct Handler;
@@ -59,6 +59,26 @@ impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         ctx.set_activity(Activity::listening("~q <youtube url>")).await;
         println!("{} is connected!", ready.user.name);
+    }
+
+    async fn voice_state_update(&self, _ctx: Context, _old: Option<VoiceState>, _new: VoiceState) {
+        let channel_result = _ctx.http.get_channel(_new.channel_id.unwrap().into()).await;
+        match channel_result.unwrap().guild() {
+            Some(guild_channel) => {
+                let members_result = guild_channel.members(&_ctx.cache).await;
+                match members_result {
+                    Ok(members) => {
+                        println!("{}", members.len())
+                    },
+                    Err(why) => {
+                        println!("{}", why);
+                    }
+                }
+            },
+            None => {
+                println!("{}", "no guild")
+            }
+        };
     }
 }
 
@@ -148,6 +168,39 @@ async fn deafen(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
+async fn set_joined(ctx: &Context, msg: &Message) -> bool {
+    let database_url = std::env::var("DATABASE_URL").expect("Expected a database url in the environment");
+    let wrapped_client = MongoClient::with_uri_str(database_url).await;
+    let db = wrapped_client.unwrap().database("rexmit");
+    let collection: Collection<Guild> = db.collection("guilds");
+    let guild_id = msg.guild_id.unwrap().0;
+    let http_guild = ctx.http.get_guild(guild_id).await;
+    let partial_guild = http_guild.unwrap();
+    let guild = Guild::new(guild_id.to_string(), partial_guild.clone().name, true);
+    
+    let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "joined": true }}, None).await;
+
+    println!("{:?}", result);
+    match &result {
+        Ok(option) => {
+            match &option {
+                Some(guild) => {
+                    println!("{:?}", guild);
+                }, 
+                None => {
+                    let result = collection.insert_one(&guild, None).await;
+                    println!("{:?}", result);
+                }
+            }
+        },
+        Err(why) => {
+            println!("{}", why);
+            return false;
+        }
+    }
+    return true;
+}
+
 #[command]
 #[only_in(guilds)]
 async fn j(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
@@ -157,6 +210,7 @@ async fn j(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn join(ctx: &Context, msg: &Message) -> CommandResult {
+    set_joined(ctx, msg).await;
     let guild = msg.guild(&ctx.cache).unwrap();
     let guild_id = guild.id;
 
@@ -188,6 +242,8 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                 .await,
         );
 
+        let guild_id = msg.guild_id.unwrap();
+
         let chan_id = msg.channel_id;
 
         let send_http = ctx.http.clone();
@@ -201,17 +257,6 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                 http: send_http,
             },
         );
-
-        //let send_http = ctx.http.clone();
-
-        /*handle.add_global_event(
-            Event::Periodic(Duration::from_secs(60), None),
-            ChannelDurationNotifier {
-                chan_id,
-                count: Default::default(),
-                http: send_http,
-            },
-        );*/
     } else {
         check_msg(
             msg.channel_id
@@ -238,32 +283,6 @@ impl VoiceEventHandler for TrackEndNotifier {
                     .await,
             );
         }
-
-        None
-    }
-}
-
-struct ChannelDurationNotifier {
-    chan_id: ChannelId,
-    count: Arc<AtomicUsize>,
-    http: Arc<Http>,
-}
-
-#[async_trait]
-impl VoiceEventHandler for ChannelDurationNotifier {
-    async fn act(&self, _ctx: &EventContext<'_>) -> Option<Event> {
-        let count_before = self.count.fetch_add(1, Ordering::Relaxed);
-        check_msg(
-            self.chan_id
-                .say(
-                    &self.http,
-                    &format!(
-                        "I've been in this channel for {} minutes!",
-                        count_before + 1
-                    ),
-                )
-                .await,
-        );
 
         None
     }
@@ -556,7 +575,7 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             msg.channel_id
                 .say(
                     &ctx.http,
-                    format!("Added song to queue: position {}", handler.queue().len()),
+                    format!("Added song to queue: position {}", handler.queue().len()),  
                 )
                 .await,
         );
@@ -568,7 +587,7 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         let guild_id = msg.guild_id.unwrap().0;
         let http_guild = ctx.http.get_guild(guild_id).await;
         let partial_guild = http_guild.unwrap();
-        let mut guild = Guild::new(guild_id.to_string(), partial_guild.clone().name);
+        let mut guild = Guild::new(guild_id.to_string(), partial_guild.clone().name, true);
 
         for track_handle in handler.queue().current_queue() {
             guild.queue.push(track_handle.metadata().source_url.clone().unwrap())
