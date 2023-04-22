@@ -267,7 +267,8 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                 voice_chan_id: connect_to,
                 chan_id,
                 http: send_http,
-                cache: send_cache
+                cache: send_cache,
+                ctx: ctx.clone()
             },
         );
     } else {
@@ -530,6 +531,7 @@ struct Periodic {
     chan_id: ChannelId,
     http: Arc<Http>,
     cache: Arc<Cache>,
+    ctx: Context,
 }
 
 #[async_trait]
@@ -539,7 +541,30 @@ impl VoiceEventHandler for Periodic {
         match channel.unwrap().guild() {
             Some(guild_channel) => {
                 let members = guild_channel.members(&self.cache).await;
-                println!("{}", members.unwrap().len())
+                println!("{}", members.unwrap().len());
+
+                /*
+                let manager = songbird::get(&self.ctx)
+                    .await
+                    .expect("Songbird Voice client placed in at initialisation.")
+                    .clone();
+
+                let has_handler = manager.get(guild_channel.guild_id).is_some();
+
+                if has_handler {
+                    if let Err(e) = manager.remove(guild_channel.guild_id).await {
+                        check_msg(
+                            self.chan_id
+                                .say(&self.http, format!("Failed: {:?}", e))
+                                .await,
+                        );
+                    }
+
+                    check_msg(self.chan_id.say(&self.http, "Left voice channel").await);
+                } else {
+                    check_msg(self.chan_id.say(&self.http, "Not in a voice channel").await);
+                }
+                */
             },
             None => {
                 println!("{}", "channel was none")
