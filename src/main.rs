@@ -541,30 +541,32 @@ impl VoiceEventHandler for Periodic {
         match channel.unwrap().guild() {
             Some(guild_channel) => {
                 let members = guild_channel.members(&self.cache).await;
-                println!("{}", members.unwrap().len());
 
-                /*
-                let manager = songbird::get(&self.ctx)
-                    .await
-                    .expect("Songbird Voice client placed in at initialisation.")
-                    .clone();
+                // please modularize this monstrocity
+                // what i mean by this is create some functions and call the functions instead
+                // we want to utilize DRY (DON'T REPEAT YOURSELF) principles
+                if members.unwrap().len() <= 1 {
+                    let manager = songbird::get(&self.ctx)
+                        .await
+                        .expect("Songbird Voice client placed in at initialisation.")
+                        .clone();
 
-                let has_handler = manager.get(guild_channel.guild_id).is_some();
+                    let has_handler = manager.get(guild_channel.guild_id).is_some();
 
-                if has_handler {
-                    if let Err(e) = manager.remove(guild_channel.guild_id).await {
-                        check_msg(
-                            self.chan_id
-                                .say(&self.http, format!("Failed: {:?}", e))
-                                .await,
-                        );
+                    if has_handler {
+                        if let Err(e) = manager.remove(guild_channel.guild_id).await {
+                            check_msg(
+                                self.chan_id
+                                    .say(&self.http, format!("Failed: {:?}", e))
+                                    .await,
+                            );
+                        }
+
+                        check_msg(self.chan_id.say(&self.http, "Left voice channel").await);
+                    } else {
+                        check_msg(self.chan_id.say(&self.http, "Not in a voice channel").await);
                     }
-
-                    check_msg(self.chan_id.say(&self.http, "Left voice channel").await);
-                } else {
-                    check_msg(self.chan_id.say(&self.http, "Not in a voice channel").await);
                 }
-                */
             },
             None => {
                 println!("{}", "channel was none")
