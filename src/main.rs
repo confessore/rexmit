@@ -262,7 +262,7 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
         let send_cache = ctx.cache.clone();
 
         handle.add_global_event(
-            Event::Periodic(Duration::from_secs(15), None),
+            Event::Periodic(Duration::from_secs(1800), None),
             Periodic {
                 voice_chan_id: connect_to,
                 chan_id,
