@@ -209,9 +209,7 @@ async fn set_joined(ctx: &Context, msg: &Message) -> bool {
             let collection = collection_option.unwrap();
             let partial_guild_option = context_get_guild(ctx, guild_id.into()).await;
             if partial_guild_option.is_some() {
-                let partial_guild = partial_guild_option.unwrap();
-                
-                let guild = Guild::new(guild_id.to_string(), partial_guild.clone().name, true);
+                let guild = Guild::new(partial_guild_option);
                 let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "joined": true }}, None).await;
         
                 println!("{:?}", result);
@@ -689,7 +687,7 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         let guild_id = msg.guild_id.unwrap().0;
         let http_guild = ctx.http.get_guild(guild_id).await;
         let partial_guild = http_guild.unwrap();
-        let mut guild = Guild::new(guild_id.to_string(), partial_guild.clone().name, true);
+        let mut guild = Guild::new(Some(partial_guild));
 
         for track_handle in handler.queue().current_queue() {
             guild.queue.push(track_handle.metadata().source_url.clone().unwrap())
