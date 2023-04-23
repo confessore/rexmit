@@ -20,7 +20,7 @@ use std::{
 
 use mongodb::{
     Client as MongoClient,
-    Collection, bson::{doc, Bson}
+    Collection, bson::{doc, Bson}, Database
 };
 use rexmit::models::guild::Guild;
 use serenity::{
@@ -168,12 +168,25 @@ async fn deafen(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
-async fn get_guild_collection() -> Option<Collection<Guild>> {
-    let database_url = std::env::var("DATABASE_URL");
+async fn get_rexmit_database() -> Option<Database> {
+    let database_url: Result<String, env::VarError> = std::env::var("DATABASE_URL");
     if database_url.is_ok() {
-        let wrapped_client = MongoClient::with_uri_str(database_url.unwrap()).await;
-        let db = wrapped_client.unwrap().database("rexmit");
-        let collection: Collection<Guild> = db.collection("guilds");
+        let client_result = MongoClient::with_uri_str(database_url.unwrap()).await;
+        if client_result.is_ok() {
+            let client = client_result.unwrap();
+            let database = client.database("rexmit");
+            return Some(database);
+        }
+    }
+    return None;
+}
+
+async fn get_guild_collection() -> Option<Collection<Guild>> {
+
+    let database_option = get_rexmit_database().await;
+    if database_option.is_some() {
+        let database = database_option.unwrap();
+        let collection: Collection<Guild> = database.collection("guilds");
         return Some(collection);
     }
     return None;
