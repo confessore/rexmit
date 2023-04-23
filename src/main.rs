@@ -201,36 +201,33 @@ async fn context_get_guild(ctx: &Context, guild_id: u64) -> Option<PartialGuild>
     return None;
 }
 
-async fn set_joined(ctx: &Context, msg: &Message) -> bool {
-    if msg.guild_id.is_some() {
-        let guild_id = msg.guild_id.unwrap();
-        let collection_option = get_guild_collection().await;
-        if collection_option.is_some() {
-            let collection = collection_option.unwrap();
-            let partial_guild_option = context_get_guild(ctx, guild_id.into()).await;
-            if partial_guild_option.is_some() {
-                let guild = Guild::new(partial_guild_option);
-                let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "joined": true }}, None).await;
-        
-                println!("{:?}", result);
-                match &result {
-                    Ok(option) => {
-                        match &option {
-                            Some(guild) => {
-                                println!("{:?}", guild);
-                            }, 
-                            None => {
-                                let result = collection.insert_one(&guild, None).await;
-                                println!("{:?}", result);
-                            }
+async fn set_joined(ctx: &Context, guild_id: u64, joined: bool) -> bool {
+    let collection_option = get_guild_collection().await;
+    if collection_option.is_some() {
+        let collection = collection_option.unwrap();
+        let partial_guild_option = context_get_guild(ctx, guild_id.into()).await;
+        if partial_guild_option.is_some() {
+            let guild = Guild::new(partial_guild_option);
+            let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "joined": joined }}, None).await;
+    
+            println!("{:?}", result);
+            match &result {
+                Ok(option) => {
+                    match &option {
+                        Some(guild) => {
+                            println!("{:?}", guild);
+                        }, 
+                        None => {
+                            let result = collection.insert_one(&guild, None).await;
+                            println!("{:?}", result);
                         }
-                    },
-                    Err(why) => {
-                        println!("{}", why);
                     }
+                },
+                Err(why) => {
+                    println!("{}", why);
                 }
-                return true;
             }
+            return true;
         }
     }
     return false;
@@ -245,75 +242,77 @@ async fn j(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn join(ctx: &Context, msg: &Message) -> CommandResult {
-    set_joined(ctx, msg).await;
-    let guild = msg.guild(&ctx.cache).unwrap();
-    let guild_id = guild.id;
-
-    let channel_id = guild
-        .voice_states
-        .get(&msg.author.id)
-        .and_then(|voice_state| voice_state.channel_id);
-
-    let connect_to = match channel_id {
-        Some(channel) => channel,
-        None => {
-            check_msg(msg.reply(ctx, "Not in a voice channel").await);
-
-            return Ok(());
-        },
-    };
-
-    let manager = songbird::get(ctx)
-        .await
-        .expect("Songbird Voice client placed in at initialisation.")
-        .clone();
-
-    let (handle_lock, success) = manager.join(guild_id, connect_to).await;
-
-    if let Ok(_channel) = success {
-        check_msg(
-            msg.channel_id
-                .say(&ctx.http, &format!("Joined {}", connect_to.mention()))
-                .await,
-        );
-
+    if msg.guild_id.is_some() {
         let guild_id = msg.guild_id.unwrap();
+        set_joined(ctx, guild_id.into(), true).await;
+        let guild = msg.guild(&ctx.cache).unwrap();
+        let guild_id = guild.id;
 
-        let chan_id = msg.channel_id;
+        let channel_id = guild
+            .voice_states
+            .get(&msg.author.id)
+            .and_then(|voice_state| voice_state.channel_id);
 
-        let send_http = ctx.http.clone();
+        let connect_to = match channel_id {
+            Some(channel) => channel,
+            None => {
+                check_msg(msg.reply(ctx, "Not in a voice channel").await);
 
-        let mut handle = handle_lock.lock().await;
-
-        handle.add_global_event(
-            Event::Track(TrackEvent::End),
-            TrackEndNotifier {
-                chan_id,
-                http: send_http,
+                return Ok(());
             },
-        );
+        };
 
-        let send_http = ctx.http.clone();
-        let send_cache = ctx.cache.clone();
+        let manager = songbird::get(ctx)
+            .await
+            .expect("Songbird Voice client placed in at initialisation.")
+            .clone();
 
-        handle.add_global_event(
-            Event::Periodic(Duration::from_secs(1800), None),
-            Periodic {
-                voice_chan_id: connect_to,
-                chan_id,
-                http: send_http,
-                cache: send_cache,
-                ctx: ctx.clone()
-            },
-        );
-    } else {
-        check_msg(
-            msg.channel_id
-                .say(&ctx.http, "Error joining the channel")
-                .await,
-        );
+        let (handle_lock, success) = manager.join(guild_id, connect_to).await;
+
+        if let Ok(_channel) = success {
+            check_msg(
+                msg.channel_id
+                    .say(&ctx.http, &format!("Joined {}", connect_to.mention()))
+                    .await,
+            );
+
+            let guild_id = msg.guild_id.unwrap();
+
+            let chan_id = msg.channel_id;
+
+            let send_http = ctx.http.clone();
+
+            let mut handle = handle_lock.lock().await;
+
+            handle.add_global_event(
+                Event::Track(TrackEvent::End),
+                TrackEndNotifier {
+                    chan_id,
+                    http: send_http,
+                },
+            );
+
+            let send_http = ctx.http.clone();
+            let send_cache = ctx.cache.clone();
+
+            handle.add_global_event(
+                Event::Periodic(Duration::from_secs(1800), None),
+                Periodic {
+                    voice_chan_id: connect_to,
+                    chan_id,
+                    http: send_http,
+                    cache: send_cache,
+                    ctx: ctx.clone()
+                },
+            );
+        } else {
+            check_msg(
+                msg.channel_id
+                    .say(&ctx.http, "Error joining the channel")
+                    .await,
+            );
+        }
     }
-
     Ok(())
 }
 
