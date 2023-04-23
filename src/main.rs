@@ -35,7 +35,7 @@ use serenity::{
         StandardFramework,
     },
     http::Http,
-    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity, GuildId, VoiceState}},
+    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity, GuildId, VoiceState, PartialGuild}},
     prelude::{GatewayIntents, Mentionable},
     Result as SerenityResult, futures::stream::Collect,
 };
@@ -192,35 +192,48 @@ async fn get_guild_collection() -> Option<Collection<Guild>> {
     return None;
 }
 
-async fn set_joined(ctx: &Context, msg: &Message) -> bool {
-    let collection_option = get_guild_collection().await;
-    if collection_option.is_some() {
-        let collection = collection_option.unwrap();
-        let guild_id = msg.guild_id.unwrap().0;
-        let http_guild = ctx.http.get_guild(guild_id).await;
-        let partial_guild = http_guild.unwrap();
-        let guild = Guild::new(guild_id.to_string(), partial_guild.clone().name, true);
-        
-        let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "joined": true }}, None).await;
+async fn context_get_guild(ctx: &Context, guild_id: u64) -> Option<PartialGuild> {
+    let partial_guild_result = ctx.http.get_guild(guild_id).await;
+    if partial_guild_result.is_ok() {
+        let partial_guild = partial_guild_result.unwrap();
+        return Some(partial_guild)
+    }
+    return None;
+}
 
-        println!("{:?}", result);
-        match &result {
-            Ok(option) => {
-                match &option {
-                    Some(guild) => {
-                        println!("{:?}", guild);
-                    }, 
-                    None => {
-                        let result = collection.insert_one(&guild, None).await;
-                        println!("{:?}", result);
+async fn set_joined(ctx: &Context, msg: &Message) -> bool {
+    if msg.guild_id.is_some() {
+        let guild_id = msg.guild_id.unwrap();
+        let collection_option = get_guild_collection().await;
+        if collection_option.is_some() {
+            let collection = collection_option.unwrap();
+            let partial_guild_option = context_get_guild(ctx, guild_id.into()).await;
+            if partial_guild_option.is_some() {
+                let partial_guild = partial_guild_option.unwrap();
+                
+                let guild = Guild::new(guild_id.to_string(), partial_guild.clone().name, true);
+                let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "joined": true }}, None).await;
+        
+                println!("{:?}", result);
+                match &result {
+                    Ok(option) => {
+                        match &option {
+                            Some(guild) => {
+                                println!("{:?}", guild);
+                            }, 
+                            None => {
+                                let result = collection.insert_one(&guild, None).await;
+                                println!("{:?}", result);
+                            }
+                        }
+                    },
+                    Err(why) => {
+                        println!("{}", why);
                     }
                 }
-            },
-            Err(why) => {
-                println!("{}", why);
+                return true;
             }
         }
-        return true;
     }
     return false;
 }
