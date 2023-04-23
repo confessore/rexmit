@@ -168,42 +168,53 @@ async fn deafen(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
-async fn set_joined(ctx: &Context, msg: &Message) -> bool {
-    let database_url = std::env::var("DATABASE_URL").expect("Expected a database url in the environment");
-    let wrapped_client = MongoClient::with_uri_str(database_url).await;
-    let db = wrapped_client.unwrap().database("rexmit");
-    let collection: Collection<Guild> = db.collection("guilds");
-    let guild_id = msg.guild_id.unwrap().0;
-    let http_guild = ctx.http.get_guild(guild_id).await;
-    let partial_guild = http_guild.unwrap();
-    let guild = Guild::new(guild_id.to_string(), partial_guild.clone().name, true);
-    
-    let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "joined": true }}, None).await;
-
-    println!("{:?}", result);
-    match &result {
-        Ok(option) => {
-            match &option {
-                Some(guild) => {
-                    println!("{:?}", guild);
-                }, 
-                None => {
-                    let result = collection.insert_one(&guild, None).await;
-                    println!("{:?}", result);
-                }
-            }
-        },
-        Err(why) => {
-            println!("{}", why);
-            return false;
-        }
+async fn get_guild_collection() -> Option<Collection<Guild>> {
+    let database_url = std::env::var("DATABASE_URL");
+    if database_url.is_ok() {
+        let wrapped_client = MongoClient::with_uri_str(database_url.unwrap()).await;
+        let db = wrapped_client.unwrap().database("rexmit");
+        let collection: Collection<Guild> = db.collection("guilds");
+        return Some(collection);
     }
-    return true;
+    return None;
+}
+
+async fn set_joined(ctx: &Context, msg: &Message) -> bool {
+    let collection_option = get_guild_collection().await;
+    if collection_option.is_some() {
+        let collection = collection_option.unwrap();
+        let guild_id = msg.guild_id.unwrap().0;
+        let http_guild = ctx.http.get_guild(guild_id).await;
+        let partial_guild = http_guild.unwrap();
+        let guild = Guild::new(guild_id.to_string(), partial_guild.clone().name, true);
+        
+        let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "joined": true }}, None).await;
+
+        println!("{:?}", result);
+        match &result {
+            Ok(option) => {
+                match &option {
+                    Some(guild) => {
+                        println!("{:?}", guild);
+                    }, 
+                    None => {
+                        let result = collection.insert_one(&guild, None).await;
+                        println!("{:?}", result);
+                    }
+                }
+            },
+            Err(why) => {
+                println!("{}", why);
+            }
+        }
+        return true;
+    }
+    return false;
 }
 
 #[command]
 #[only_in(guilds)]
-async fn j(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+async fn j(ctx: &Context, msg: &Message) -> CommandResult {
     return join(ctx, msg, _args).await;
 }
 
