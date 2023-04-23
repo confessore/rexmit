@@ -10,8 +10,7 @@ pub struct Guild {
     pub subscribed: bool,
     pub expiration: i64,
     pub joined: bool,
-    pub queue: Vec<String>,
-    pub partial_guild_option: Option<PartialGuild>,
+    pub queue: Vec<String>
 }
 
 impl Guild {
@@ -23,7 +22,6 @@ impl Guild {
                 Guild {
                     id: id.to_string(),
                     name: name.to_string(),
-                    partial_guild_option,
                     ..Default::default() 
                 }
             },
