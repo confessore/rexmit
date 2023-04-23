@@ -305,6 +305,12 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                     ctx: ctx.clone()
                 },
             );
+            match deafen(ctx, msg, _args).await {
+                Ok(result) => result,
+                Err(why) => {
+                    println!("{}", why)
+                }
+            }
         } else {
             check_msg(
                 msg.channel_id
@@ -345,29 +351,32 @@ async fn l(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn leave(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    let guild = msg.guild(&ctx.cache).unwrap();
-    let guild_id = guild.id;
+    if msg.guild_id.is_some() {
+        let guild_id = msg.guild_id.unwrap();
+        set_joined(ctx, guild_id.into(), false).await;
+        let guild = msg.guild(&ctx.cache).unwrap();
+        let guild_id = guild.id;
 
-    let manager = songbird::get(ctx)
-        .await
-        .expect("Songbird Voice client placed in at initialisation.")
-        .clone();
-    let has_handler = manager.get(guild_id).is_some();
+        let manager = songbird::get(ctx)
+            .await
+            .expect("Songbird Voice client placed in at initialisation.")
+            .clone();
+        let has_handler = manager.get(guild_id).is_some();
 
-    if has_handler {
-        if let Err(e) = manager.remove(guild_id).await {
-            check_msg(
-                msg.channel_id
-                    .say(&ctx.http, format!("Failed: {:?}", e))
-                    .await,
-            );
+        if has_handler {
+            if let Err(e) = manager.remove(guild_id).await {
+                check_msg(
+                    msg.channel_id
+                        .say(&ctx.http, format!("Failed: {:?}", e))
+                        .await,
+                );
+            }
+
+            check_msg(msg.channel_id.say(&ctx.http, "Left voice channel").await);
+        } else {
+            check_msg(msg.reply(ctx, "Not in a voice channel").await);
         }
-
-        check_msg(msg.channel_id.say(&ctx.http, "Left voice channel").await);
-    } else {
-        check_msg(msg.reply(ctx, "Not in a voice channel").await);
     }
-
     Ok(())
 }
 
