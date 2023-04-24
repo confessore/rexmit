@@ -178,6 +178,7 @@ async fn get_rexmit_database() -> Option<Database> {
             return Some(database);
         }
     }
+    println!("no rexmit database found");
     return None;
 }
 
@@ -189,6 +190,7 @@ async fn get_guild_collection() -> Option<Collection<Guild>> {
         let collection: Collection<Guild> = database.collection("guilds");
         return Some(collection);
     }
+    println!("no guild collection found");
     return None;
 }
 
@@ -198,6 +200,7 @@ async fn context_get_guild(ctx: &Context, guild_id: u64) -> Option<PartialGuild>
         let partial_guild = partial_guild_result.unwrap();
         return Some(partial_guild)
     }
+    println!("context guild not found");
     return None;
 }
 
@@ -230,6 +233,7 @@ async fn set_joined(ctx: &Context, guild_id: u64, joined: bool) -> bool {
             return true;
         }
     }
+    println!("unable to set joined status");
     return false;
 }
 
@@ -655,14 +659,14 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
     let guild_option = msg.guild(&ctx.cache);
     let guild = guild_option.as_ref().unwrap();
-    let guild_id = guild.id;
+
 
     let manager = songbird::get(ctx)
         .await
         .expect("Songbird Voice client placed in at initialisation.")
         .clone();
 
-    if let Some(handler_lock) = manager.get(guild_id) {
+    if let Some(handler_lock) = manager.get(guild.id) {
         let mut handler = handler_lock.lock().await;
 
         // Here, we use lazy restartable sources to make sure that we don't pay
@@ -698,7 +702,7 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 guild.queue.push(track_handle.metadata().source_url.clone().unwrap())
             }
             
-            let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "queue": &guild.queue }}, None).await;
+            let result = collection.find_one_and_update(doc! { "id": &guild.id.to_string() }, doc! { "$set": { "queue": &guild.queue }}, None).await;
 
             println!("{:?}", result);
             match &result {
