@@ -309,12 +309,12 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                     ctx: ctx.clone()
                 },
             );
-            match deafen(ctx, msg, _args).await {
+            /*match deafen(ctx, msg, _args).await {
                 Ok(result) => result,
                 Err(why) => {
                     println!("{}", why)
                 }
-            }
+            }*/
         } else {
             check_msg(
                 msg.channel_id
@@ -657,8 +657,9 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         return Ok(());
     }
 
-    let guild_option = msg.guild(&ctx.cache);
-    let guild = guild_option.as_ref().unwrap();
+    let guild = msg.guild(&ctx.cache).unwrap();
+    let guild_id = guild.id;
+    let collection_option = get_guild_collection().await;
 
 
     let manager = songbird::get(ctx)
@@ -666,7 +667,7 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         .expect("Songbird Voice client placed in at initialisation.")
         .clone();
 
-    if let Some(handler_lock) = manager.get(guild.id) {
+    if let Some(handler_lock) = manager.get(guild_id) {
         let mut handler = handler_lock.lock().await;
 
         // Here, we use lazy restartable sources to make sure that we don't pay
@@ -692,11 +693,9 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 )
                 .await,
         );
-
-        let collection_option = get_guild_collection().await;
         if collection_option.is_some() {
             let collection = collection_option.unwrap();
-            let mut guild = Guild::new_from_serenity_guild(guild_option);
+            let mut guild = Guild::new_from_serenity_guild(Some(guild));
 
             for track_handle in handler.queue().current_queue() {
                 guild.queue.push(track_handle.metadata().source_url.clone().unwrap())
@@ -720,7 +719,7 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 Err(why) => {
                     println!("{}", why)
                 }
-        }
+            }
         }
     } else {
         check_msg(
