@@ -207,7 +207,7 @@ async fn set_joined(ctx: &Context, guild_id: u64, joined: bool) -> bool {
         let collection = collection_option.unwrap();
         let partial_guild_option = context_get_guild(ctx, guild_id.into()).await;
         if partial_guild_option.is_some() {
-            let guild = Guild::new(partial_guild_option);
+            let guild = Guild::new_from_serenity_partial_guild(partial_guild_option);
             let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "joined": joined }}, None).await;
     
             println!("{:?}", result);
@@ -653,7 +653,8 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         return Ok(());
     }
 
-    let guild = msg.guild(&ctx.cache).unwrap();
+    let guild_option = msg.guild(&ctx.cache);
+    let guild = guild_option.as_ref().unwrap();
     let guild_id = guild.id;
 
     let manager = songbird::get(ctx)
@@ -688,37 +689,34 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 .await,
         );
 
-        let database_url = std::env::var("DATABASE_URL").expect("Expected a database url in the environment");
-        let wrapped_client = MongoClient::with_uri_str(database_url).await;
-        let db = wrapped_client.unwrap().database("rexmit");
-        let collection: Collection<Guild> = db.collection("guilds");
-        let guild_id = msg.guild_id.unwrap().0;
-        let http_guild = ctx.http.get_guild(guild_id).await;
-        let partial_guild = http_guild.unwrap();
-        let mut guild = Guild::new(Some(partial_guild));
+        let collection_option = get_guild_collection().await;
+        if collection_option.is_some() {
+            let collection = collection_option.unwrap();
+            let mut guild = Guild::new_from_serenity_guild(guild_option);
 
-        for track_handle in handler.queue().current_queue() {
-            guild.queue.push(track_handle.metadata().source_url.clone().unwrap())
-        }
-        
-        let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "queue": &guild.queue }}, None).await;
-
-        println!("{:?}", result);
-        match &result {
-            Ok(option) => {
-                match &option {
-                    Some(guild) => {
-                        println!("{:?}", guild);
-                    }, 
-                    None => {
-                        let result = collection.insert_one(&guild, None).await;
-                        println!("{:?}", result)
-                    }
-                }
-            },
-            Err(why) => {
-                println!("{}", why)
+            for track_handle in handler.queue().current_queue() {
+                guild.queue.push(track_handle.metadata().source_url.clone().unwrap())
             }
+            
+            let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "queue": &guild.queue }}, None).await;
+
+            println!("{:?}", result);
+            match &result {
+                Ok(option) => {
+                    match &option {
+                        Some(guild) => {
+                            println!("{:?}", guild);
+                        }, 
+                        None => {
+                            let result = collection.insert_one(&guild, None).await;
+                            println!("{:?}", result)
+                        }
+                    }
+                },
+                Err(why) => {
+                    println!("{}", why)
+                }
+        }
         }
     } else {
         check_msg(
