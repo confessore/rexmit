@@ -18,10 +18,9 @@ use std::{
 };
 
 use mongodb::{
-    Client as MongoClient,
-    Collection, bson::{doc, }, Database
+    bson::{doc, }
 };
-use rexmit::models::{guild::Guild, queue};
+use rexmit::{models::{guild::Guild}, database::{get_guild_collection, update_guild_queue, clear_guild_queue}};
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler, Cache},
@@ -48,9 +47,8 @@ use songbird::{
     EventContext,
     EventHandler as VoiceEventHandler,
     SerenityInit,
-    TrackEvent, Call,
+    TrackEvent,
 };
-use tokio::sync::MutexGuard;
 
 struct Handler;
 
@@ -163,61 +161,6 @@ async fn deafen(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     }
 
     Ok(())
-}
-
-async fn get_rexmit_database() -> Option<Database> {
-    let database_url: Result<String, env::VarError> = std::env::var("DATABASE_URL");
-    if database_url.is_ok() {
-        let client_result = MongoClient::with_uri_str(database_url.unwrap()).await;
-        if client_result.is_ok() {
-            let client = client_result.unwrap();
-            let database = client.database("rexmit");
-            return Some(database);
-        }
-    }
-    println!("no rexmit database found");
-    return None;
-}
-
-async fn get_guild_collection() -> Option<Collection<Guild>> {
-
-    let database_option = get_rexmit_database().await;
-    if database_option.is_some() {
-        let database = database_option.unwrap();
-        let collection: Collection<Guild> = database.collection("guilds");
-        return Some(collection);
-    }
-    println!("no guild collection found");
-    return None;
-}
-
-async fn update_guild_queue(guild: serenity::model::prelude::Guild, queue: Vec<String>) {
-    let collection_option = get_guild_collection().await;
-    if collection_option.is_some() {
-        let collection = collection_option.unwrap();
-        let mut guild = Guild::new_from_serenity_guild(Some(guild));
-        guild.queue = queue;
-        
-        let result = collection.find_one_and_update(doc! { "id": &guild.id.to_string() }, doc! { "$set": { "queue": &guild.queue }}, None).await;
-
-        println!("{:?}", result);
-        match &result {
-            Ok(option) => {
-                match &option {
-                    Some(guild) => {
-                        println!("{:?}", guild);
-                    }, 
-                    None => {
-                        let result = collection.insert_one(&guild, None).await;
-                        println!("{:?}", result)
-                    }
-                }
-            },
-            Err(why) => {
-                println!("{}", why)
-            }
-        }
-    }
 }
 
 async fn context_get_guild(ctx: &Context, guild_id: u64) -> Option<PartialGuild> {
@@ -397,6 +340,7 @@ async fn leave(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
             check_msg(msg.channel_id.say(&ctx.http, "Left voice channel").await);
 
+            clear_guild_queue(guild).await;
             set_joined(ctx, guild_id.into(), false).await;
         } else {
             check_msg(msg.reply(ctx, "Not in a voice channel").await);
