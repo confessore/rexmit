@@ -695,13 +695,7 @@ async fn skip(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 )
                 .await,
         );
-
-        let mut queue = vec![];
-        for track_handle in handler.queue().current_queue() {
-            queue.push(track_handle.metadata().source_url.clone().unwrap())
-        }
-
-        update_guild_queue(guild, queue).await;
+        
     } else {
         check_msg(
             msg.channel_id
@@ -748,7 +742,7 @@ async fn stop(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             queue.push(track_handle.metadata().source_url.clone().unwrap())
         }
         
-        update_guild_queue(guild, queue).await;
+        clear_guild_queue(guild).await;
         
     } else {
         check_msg(
