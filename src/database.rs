@@ -91,6 +91,34 @@ pub async fn clear_guild_queue(guild: serenity::model::prelude::Guild) {
     }
 }
 
+pub async fn pop_guild_queue(guild: serenity::model::prelude::Guild) {
+    let collection_option = get_guild_collection().await;
+    if collection_option.is_some() {
+        let collection = collection_option.unwrap();
+        
+        let result = collection.find_one_and_update(doc! { "id": &guild.id.to_string() }, doc! { "$pop": { "queue": -1 }}, None).await;
+
+        println!("{:?}", result);
+        match &result {
+            Ok(option) => {
+                match &option {
+                    Some(guild) => {
+                        println!("{:?}", guild);
+                    }, 
+                    None => {
+                        let guild = Guild::new_from_serenity_guild(Some(guild));
+                        let result = collection.insert_one(&guild, None).await;
+                        println!("{:?}", result)
+                    }
+                }
+            },
+            Err(why) => {
+                println!("{}", why)
+            }
+        }
+    }
+}
+
 pub async fn set_joined(ctx: &Context, guild_id: u64, joined: bool) -> bool {
     let collection_option = get_guild_collection().await;
     if collection_option.is_some() {

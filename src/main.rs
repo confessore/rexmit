@@ -20,7 +20,7 @@ use std::{
 use mongodb::{
     bson::{doc, }
 };
-use rexmit::{models::{guild::Guild}, database::{get_guild_collection, update_guild_queue, clear_guild_queue, set_joined}};
+use rexmit::{models::{guild::Guild}, database::{get_guild_collection, update_guild_queue, clear_guild_queue, set_joined, pop_guild_queue}};
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler, Cache},
@@ -262,7 +262,7 @@ impl VoiceEventHandler for TrackEndNotifier {
             for track in track_list.iter() {
                 queue.push(track.1.metadata().source_url.as_ref().unwrap().to_owned());
             }
-            update_guild_queue(self.guild.clone(), queue).await;
+            pop_guild_queue(self.guild.clone()).await;
             check_msg(
                 self.chan_id
                     .say(&self.http, &format!("Track ended: {}", track_list.first().as_ref().unwrap().1.metadata().source_url.as_ref().unwrap()))
@@ -695,7 +695,7 @@ async fn skip(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
                 )
                 .await,
         );
-        
+
     } else {
         check_msg(
             msg.channel_id
