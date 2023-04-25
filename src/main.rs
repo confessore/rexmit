@@ -633,7 +633,6 @@ async fn q(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let og_args = args.clone();
     let url = match args.single::<String>() {
         Ok(url) => url,
         Err(_) => {
@@ -659,8 +658,6 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
     let guild = msg.guild(&ctx.cache).unwrap();
     let guild_id = guild.id;
-    let collection_option = get_guild_collection().await;
-
 
     let manager = songbird::get(ctx)
         .await
@@ -693,6 +690,8 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 )
                 .await,
         );
+
+        let collection_option = get_guild_collection().await;
         if collection_option.is_some() {
             let collection = collection_option.unwrap();
             let mut guild = Guild::new_from_serenity_guild(Some(guild));
@@ -724,17 +723,17 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     } else {
         check_msg(
             msg.channel_id
-                .say(&ctx.http, "Not in a voice channel to play in")
+                .say(&ctx.http, "not in a voice channel to play in. attempting to join")
                 .await,
         );
-        match join(ctx, msg, og_args.clone()).await {
+        match join(ctx, msg, args.to_owned()).await {
             Ok(result) => {
                 /*check_msg(
                     msg.channel_id
                         .say(&ctx.http, og_args.clone().single::<String>().unwrap())
                         .await,
                 );*/
-                match queue(ctx, msg, og_args.clone()).await {
+                match queue(ctx, msg, args.to_owned()).await {
                     Ok(result) => result,
                     Err(_why) => {
                         check_msg(

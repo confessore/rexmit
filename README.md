@@ -18,6 +18,14 @@ follow these instructions to deploy rexmit
 
 3. create an .env file from .env.example
 
+```
+    DEBUG can be 1 for debug or 0 for release
+    DISCORD_TOKEN sourced from discord developer portal
+    DATABASE_URL can be a mongodb connection string or blank
+    
+    the idea is to feature support for mongodb but also to feature support for no database by leaving DATABASE_URL blank
+```
+
 4. build the image
     ```
     docker build -t rexmit .
