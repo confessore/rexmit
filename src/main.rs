@@ -20,7 +20,7 @@ use std::{
 use mongodb::{
     bson::{doc, }
 };
-use rexmit::{models::{guild::Guild}, database::{get_guild_collection, update_guild_queue, clear_guild_queue}};
+use rexmit::{models::{guild::Guild}, database::{get_guild_collection, update_guild_queue, clear_guild_queue, set_joined}};
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler, Cache},
@@ -161,49 +161,6 @@ async fn deafen(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     }
 
     Ok(())
-}
-
-async fn context_get_guild(ctx: &Context, guild_id: u64) -> Option<PartialGuild> {
-    let partial_guild_result = ctx.http.get_guild(guild_id).await;
-    if partial_guild_result.is_ok() {
-        let partial_guild = partial_guild_result.unwrap();
-        return Some(partial_guild)
-    }
-    println!("context guild not found");
-    return None;
-}
-
-async fn set_joined(ctx: &Context, guild_id: u64, joined: bool) -> bool {
-    let collection_option = get_guild_collection().await;
-    if collection_option.is_some() {
-        let collection = collection_option.unwrap();
-        let partial_guild_option = context_get_guild(ctx, guild_id.into()).await;
-        if partial_guild_option.is_some() {
-            let guild = Guild::new_from_serenity_partial_guild(partial_guild_option);
-            let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "joined": joined }}, None).await;
-    
-            println!("{:?}", result);
-            match &result {
-                Ok(option) => {
-                    match &option {
-                        Some(guild) => {
-                            println!("{:?}", guild);
-                        }, 
-                        None => {
-                            let result = collection.insert_one(&guild, None).await;
-                            println!("{:?}", result);
-                        }
-                    }
-                },
-                Err(why) => {
-                    println!("{}", why);
-                }
-            }
-            return true;
-        }
-    }
-    println!("unable to set joined status");
-    return false;
 }
 
 #[command]
