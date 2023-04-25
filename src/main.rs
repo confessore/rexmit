@@ -258,10 +258,6 @@ struct TrackEndNotifier {
 impl VoiceEventHandler for TrackEndNotifier {
     async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
         if let EventContext::Track(track_list) = ctx {
-            let mut queue = vec![];
-            for track in track_list.iter() {
-                queue.push(track.1.metadata().source_url.as_ref().unwrap().to_owned());
-            }
             pop_guild_queue(self.guild.clone()).await;
             check_msg(
                 self.chan_id
