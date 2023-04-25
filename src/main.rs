@@ -33,7 +33,7 @@ use serenity::{
         StandardFramework,
     },
     http::Http,
-    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity, PartialGuild}},
+    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity, PartialGuild, GuildId}},
     prelude::{GatewayIntents, Mentionable},
     Result as SerenityResult,
 };
@@ -215,6 +215,7 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
             handle.add_global_event(
                 Event::Track(TrackEvent::End),
                 TrackEndNotifier {
+                    guild,
                     chan_id,
                     http: send_http,
                 },
@@ -248,6 +249,7 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 struct TrackEndNotifier {
+    guild: serenity::model::prelude::Guild,
     chan_id: ChannelId,
     http: Arc<Http>,
 }
@@ -256,6 +258,11 @@ struct TrackEndNotifier {
 impl VoiceEventHandler for TrackEndNotifier {
     async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
         if let EventContext::Track(track_list) = ctx {
+            let mut queue = vec![];
+            for track in track_list.iter() {
+                queue.push(track.1.metadata().source_url.as_ref().unwrap().to_owned());
+            }
+            update_guild_queue(self.guild.clone(), queue).await;
             check_msg(
                 self.chan_id
                     .say(&self.http, &format!("Track ended: {}", track_list.first().as_ref().unwrap().1.metadata().source_url.as_ref().unwrap()))
