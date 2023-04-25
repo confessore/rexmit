@@ -334,7 +334,7 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                 },
             );
 
-            //set_joined(ctx, guild_id.into(), true).await;
+            set_joined(ctx, guild_id.into(), true).await;
 
         } else {
             check_msg(
@@ -397,7 +397,7 @@ async fn leave(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
             check_msg(msg.channel_id.say(&ctx.http, "Left voice channel").await);
 
-            //set_joined(ctx, guild_id.into(), false).await;
+            set_joined(ctx, guild_id.into(), false).await;
         } else {
             check_msg(msg.reply(ctx, "Not in a voice channel").await);
         }
@@ -720,7 +720,7 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             queue.push(track_handle.metadata().source_url.clone().unwrap())
         }
 
-        //update_guild_queue(guild, queue).await;
+        update_guild_queue(guild, queue).await;
 
     } else {
         check_msg(
@@ -793,7 +793,7 @@ async fn skip(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             queue.push(track_handle.metadata().source_url.clone().unwrap())
         }
 
-        //update_guild_queue(guild, queue).await;
+        update_guild_queue(guild, queue).await;
     } else {
         check_msg(
             msg.channel_id
@@ -839,7 +839,8 @@ async fn stop(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         for track_handle in handler.queue().current_queue() {
             queue.push(track_handle.metadata().source_url.clone().unwrap())
         }
-        //update_guild_queue(guild, queue).await;
+        
+        update_guild_queue(guild, queue).await;
         
     } else {
         check_msg(
