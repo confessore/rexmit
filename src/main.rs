@@ -12,7 +12,6 @@
 use std::{
     env,
     sync::{
-        atomic::{AtomicUsize, Ordering},
         Arc,
     },
     time::Duration,
@@ -20,9 +19,9 @@ use std::{
 
 use mongodb::{
     Client as MongoClient,
-    Collection, bson::{doc, Bson}, Database
+    Collection, bson::{doc, }, Database
 };
-use rexmit::models::guild::Guild;
+use rexmit::models::{guild::Guild, queue};
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler, Cache},
@@ -35,9 +34,9 @@ use serenity::{
         StandardFramework,
     },
     http::Http,
-    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity, GuildId, VoiceState, PartialGuild}},
+    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity, PartialGuild}},
     prelude::{GatewayIntents, Mentionable},
-    Result as SerenityResult, futures::stream::Collect,
+    Result as SerenityResult,
 };
 
 use songbird::{
@@ -49,8 +48,9 @@ use songbird::{
     EventContext,
     EventHandler as VoiceEventHandler,
     SerenityInit,
-    TrackEvent, events::context_data::VoiceData,
+    TrackEvent, Call,
 };
+use tokio::sync::MutexGuard;
 
 struct Handler;
 
@@ -92,10 +92,7 @@ struct General;
 async fn main() {
     tracing_subscriber::fmt::init();
 
-
-
     let debug = env::var("DEBUG").expect("Expected a DEBUG == to 1 or 0 in the environment");
-
     // Configure the client with your Discord bot token in the environment.
     let token = env::var("DISCORD_TOKEN").expect("Expected a DISCORD_TOKEN in the environment");
 
@@ -194,6 +191,35 @@ async fn get_guild_collection() -> Option<Collection<Guild>> {
     return None;
 }
 
+async fn update_guild_queue(guild: serenity::model::prelude::Guild, queue: Vec<String>) {
+    let collection_option = get_guild_collection().await;
+    if collection_option.is_some() {
+        let collection = collection_option.unwrap();
+        let mut guild = Guild::new_from_serenity_guild(Some(guild));
+        guild.queue = queue;
+        
+        let result = collection.find_one_and_update(doc! { "id": &guild.id.to_string() }, doc! { "$set": { "queue": &guild.queue }}, None).await;
+
+        println!("{:?}", result);
+        match &result {
+            Ok(option) => {
+                match &option {
+                    Some(guild) => {
+                        println!("{:?}", guild);
+                    }, 
+                    None => {
+                        let result = collection.insert_one(&guild, None).await;
+                        println!("{:?}", result)
+                    }
+                }
+            },
+            Err(why) => {
+                println!("{}", why)
+            }
+        }
+    }
+}
+
 async fn context_get_guild(ctx: &Context, guild_id: u64) -> Option<PartialGuild> {
     let partial_guild_result = ctx.http.get_guild(guild_id).await;
     if partial_guild_result.is_ok() {
@@ -247,8 +273,6 @@ async fn j(ctx: &Context, msg: &Message) -> CommandResult {
 #[only_in(guilds)]
 async fn join(ctx: &Context, msg: &Message) -> CommandResult {
     if msg.guild_id.is_some() {
-        let guild_id = msg.guild_id.unwrap();
-        set_joined(ctx, guild_id.into(), true).await;
         let guild = msg.guild(&ctx.cache).unwrap();
         let guild_id = guild.id;
 
@@ -309,12 +333,9 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                     ctx: ctx.clone()
                 },
             );
-            /*match deafen(ctx, msg, _args).await {
-                Ok(result) => result,
-                Err(why) => {
-                    println!("{}", why)
-                }
-            }*/
+
+            set_joined(ctx, guild_id.into(), true).await;
+
         } else {
             check_msg(
                 msg.channel_id
@@ -356,8 +377,6 @@ async fn l(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 #[only_in(guilds)]
 async fn leave(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     if msg.guild_id.is_some() {
-        let guild_id = msg.guild_id.unwrap();
-        set_joined(ctx, guild_id.into(), false).await;
         let guild = msg.guild(&ctx.cache).unwrap();
         let guild_id = guild.id;
 
@@ -377,6 +396,8 @@ async fn leave(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             }
 
             check_msg(msg.channel_id.say(&ctx.http, "Left voice channel").await);
+
+            set_joined(ctx, guild_id.into(), false).await;
         } else {
             check_msg(msg.reply(ctx, "Not in a voice channel").await);
         }
@@ -633,6 +654,9 @@ async fn q(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    // capture args before mutating
+    let og_args = &args.clone();
+
     let url = match args.single::<String>() {
         Ok(url) => url,
         Err(_) => {
@@ -690,50 +714,21 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 )
                 .await,
         );
-
-        let collection_option = get_guild_collection().await;
-        if collection_option.is_some() {
-            let collection = collection_option.unwrap();
-            let mut guild = Guild::new_from_serenity_guild(Some(guild));
-
-            for track_handle in handler.queue().current_queue() {
-                guild.queue.push(track_handle.metadata().source_url.clone().unwrap())
-            }
-            
-            let result = collection.find_one_and_update(doc! { "id": &guild.id.to_string() }, doc! { "$set": { "queue": &guild.queue }}, None).await;
-
-            println!("{:?}", result);
-            match &result {
-                Ok(option) => {
-                    match &option {
-                        Some(guild) => {
-                            println!("{:?}", guild);
-                        }, 
-                        None => {
-                            let result = collection.insert_one(&guild, None).await;
-                            println!("{:?}", result)
-                        }
-                    }
-                },
-                Err(why) => {
-                    println!("{}", why)
-                }
-            }
+        let mut queue = vec![];
+        for track_handle in handler.queue().current_queue() {
+            queue.push(track_handle.metadata().source_url.clone().unwrap())
         }
+        update_guild_queue(guild, queue).await;
+
     } else {
         check_msg(
             msg.channel_id
                 .say(&ctx.http, "not in a voice channel to play in. attempting to join")
                 .await,
         );
-        match join(ctx, msg, args.to_owned()).await {
+        match join(ctx, msg, og_args.to_owned()).await {
             Ok(result) => {
-                /*check_msg(
-                    msg.channel_id
-                        .say(&ctx.http, og_args.clone().single::<String>().unwrap())
-                        .await,
-                );*/
-                match queue(ctx, msg, args.to_owned()).await {
+                match queue(ctx, msg, og_args.to_owned()).await {
                     Ok(result) => result,
                     Err(_why) => {
                         check_msg(
@@ -755,12 +750,6 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             }
         }
     }
-    //let databases = wrapped_client.unwrap().list_databases(None, None).await;*/
-
-    /*let collection: Collection<Document> = db.collection("guilds");
-    let filter = doc! {  };
-    let options = CountOptions::builder().build();
-    println!("{:?}", collection.count_documents(filter, options).await);*/
 
     Ok(())
 }
@@ -785,17 +774,23 @@ async fn skip(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     if let Some(handler_lock) = manager.get(guild_id) {
         let handler = handler_lock.lock().await;
-        let queue = handler.queue();
-        let _ = queue.skip();
+        let track_queue = handler.queue();
+        let _ = track_queue.skip();
 
         check_msg(
             msg.channel_id
                 .say(
                     &ctx.http,
-                    format!("Song skipped: {} in queue.", queue.len()),
+                    format!("Song skipped: {} in queue.", track_queue.len()),
                 )
                 .await,
         );
+
+        let mut queue = vec![];
+        for track_handle in handler.queue().current_queue() {
+            queue.push(track_handle.metadata().source_url.clone().unwrap())
+        }
+        update_guild_queue(guild, queue).await;
     } else {
         check_msg(
             msg.channel_id
@@ -832,10 +827,17 @@ async fn stop(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     if let Some(handler_lock) = manager.get(guild_id) {
         let handler = handler_lock.lock().await;
-        let queue = handler.queue();
-        let _ = queue.stop();
+        let track_queue = handler.queue();
+        let _ = track_queue.stop();
 
         check_msg(msg.channel_id.say(&ctx.http, "Queue cleared.").await);
+
+        let mut queue = vec![];
+        for track_handle in handler.queue().current_queue() {
+            queue.push(track_handle.metadata().source_url.clone().unwrap())
+        }
+        update_guild_queue(guild, queue).await;
+        
     } else {
         check_msg(
             msg.channel_id

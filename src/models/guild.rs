@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use serde::{Serialize, Deserialize};
 use serenity::model::prelude::PartialGuild;
 
