@@ -12,15 +12,18 @@
 use std::{
     env,
     sync::{
-        atomic::{AtomicUsize, Ordering},
         Arc,
     },
     time::Duration,
 };
 
+use mongodb::{
+    bson::{doc, }
+};
+use rexmit::{models::{guild::Guild}, database::{get_guild_collection, update_guild_queue, clear_guild_queue, set_joined, pop_guild_queue}};
 use serenity::{
     async_trait,
-    client::{Client, Context, EventHandler},
+    client::{Client, Context, EventHandler, Cache},
     framework::{
         standard::{
             macros::{command, group},
@@ -30,7 +33,7 @@ use serenity::{
         StandardFramework,
     },
     http::Http,
-    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity}},
+    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity, PartialGuild, GuildId}},
     prelude::{GatewayIntents, Mentionable},
     Result as SerenityResult,
 };
@@ -55,17 +58,38 @@ impl EventHandler for Handler {
         ctx.set_activity(Activity::listening("~q <youtube url>")).await;
         println!("{} is connected!", ready.user.name);
     }
+
+    /*async fn voice_state_update(&self, _ctx: Context, _old: Option<VoiceState>, _new: VoiceState) {
+        let channel_result = _ctx.http.get_channel(_new.channel_id.unwrap().into()).await;
+        match channel_result.unwrap().guild() {
+            Some(guild_channel) => {
+                let members_result = guild_channel.members(&_ctx.cache).await;
+                match members_result {
+                    Ok(members) => {
+                        println!("{}", members.len())
+                    },
+                    Err(why) => {
+                        println!("{}", why);
+                    }
+                }
+            },
+            None => {
+                println!("{}", "no guild")
+            }
+        };
+    }*/
 }
 
 #[group]
 #[commands(
-    deafen, join, leave, mute, q, queue, s, skip, c, clear, stop, ping, undeafen, unmute
+    d, deafen, j, join, l, leave, m, mute, q, queue, s, skip, c, clear, stop, p, ping, ud, undeafen, um, unmute
 )]
 struct General;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
+
     let debug = env::var("DEBUG").expect("Expected a DEBUG == to 1 or 0 in the environment");
     // Configure the client with your Discord bot token in the environment.
     let token = env::var("DISCORD_TOKEN").expect("Expected a DISCORD_TOKEN in the environment");
@@ -97,7 +121,12 @@ async fn main() {
 }
 
 #[command]
-async fn deafen(ctx: &Context, msg: &Message) -> CommandResult {
+async fn d(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return deafen(ctx, msg, _args).await;
+}
+
+#[command]
+async fn deafen(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let guild = msg.guild(&ctx.cache).unwrap();
     let guild_id = guild.id;
 
@@ -136,74 +165,91 @@ async fn deafen(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 #[only_in(guilds)]
+async fn j(ctx: &Context, msg: &Message) -> CommandResult {
+    return join(ctx, msg, _args).await;
+}
+
+#[command]
+#[only_in(guilds)]
 async fn join(ctx: &Context, msg: &Message) -> CommandResult {
-    let guild = msg.guild(&ctx.cache).unwrap();
-    let guild_id = guild.id;
+    if msg.guild_id.is_some() {
+        let guild = msg.guild(&ctx.cache).unwrap();
+        let guild_id = guild.id;
 
-    let channel_id = guild
-        .voice_states
-        .get(&msg.author.id)
-        .and_then(|voice_state| voice_state.channel_id);
+        let channel_id = guild
+            .voice_states
+            .get(&msg.author.id)
+            .and_then(|voice_state| voice_state.channel_id);
 
-    let connect_to = match channel_id {
-        Some(channel) => channel,
-        None => {
-            check_msg(msg.reply(ctx, "Not in a voice channel").await);
+        let connect_to = match channel_id {
+            Some(channel) => channel,
+            None => {
+                check_msg(msg.reply(ctx, "Not in a voice channel").await);
 
-            return Ok(());
-        },
-    };
-
-    let manager = songbird::get(ctx)
-        .await
-        .expect("Songbird Voice client placed in at initialisation.")
-        .clone();
-
-    let (handle_lock, success) = manager.join(guild_id, connect_to).await;
-
-    if let Ok(_channel) = success {
-        check_msg(
-            msg.channel_id
-                .say(&ctx.http, &format!("Joined {}", connect_to.mention()))
-                .await,
-        );
-
-        let chan_id = msg.channel_id;
-
-        let send_http = ctx.http.clone();
-
-        let mut handle = handle_lock.lock().await;
-
-        handle.add_global_event(
-            Event::Track(TrackEvent::End),
-            TrackEndNotifier {
-                chan_id,
-                http: send_http,
+                return Ok(());
             },
-        );
+        };
 
-        //let send_http = ctx.http.clone();
+        let manager = songbird::get(ctx)
+            .await
+            .expect("Songbird Voice client placed in at initialisation.")
+            .clone();
 
-        /*handle.add_global_event(
-            Event::Periodic(Duration::from_secs(60), None),
-            ChannelDurationNotifier {
-                chan_id,
-                count: Default::default(),
-                http: send_http,
-            },
-        );*/
-    } else {
-        check_msg(
-            msg.channel_id
-                .say(&ctx.http, "Error joining the channel")
-                .await,
-        );
+        let (handle_lock, success) = manager.join(guild_id, connect_to).await;
+
+        if let Ok(_channel) = success {
+            check_msg(
+                msg.channel_id
+                    .say(&ctx.http, &format!("Joined {}", connect_to.mention()))
+                    .await,
+            );
+
+            let guild_id = msg.guild_id.unwrap();
+
+            let chan_id = msg.channel_id;
+
+            let send_http = ctx.http.clone();
+
+            let mut handle = handle_lock.lock().await;
+
+            handle.add_global_event(
+                Event::Track(TrackEvent::End),
+                TrackEndNotifier {
+                    guild,
+                    chan_id,
+                    http: send_http,
+                },
+            );
+
+            let send_http = ctx.http.clone();
+            let send_cache = ctx.cache.clone();
+
+            handle.add_global_event(
+                Event::Periodic(Duration::from_secs(1800), None),
+                Periodic {
+                    voice_chan_id: connect_to,
+                    chan_id,
+                    http: send_http,
+                    cache: send_cache,
+                    ctx: ctx.clone()
+                },
+            );
+
+            set_joined(ctx, guild_id.into(), true).await;
+
+        } else {
+            check_msg(
+                msg.channel_id
+                    .say(&ctx.http, "Error joining the channel")
+                    .await,
+            );
+        }
     }
-
     Ok(())
 }
 
 struct TrackEndNotifier {
+    guild: serenity::model::prelude::Guild,
     chan_id: ChannelId,
     http: Arc<Http>,
 }
@@ -212,38 +258,13 @@ struct TrackEndNotifier {
 impl VoiceEventHandler for TrackEndNotifier {
     async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
         if let EventContext::Track(track_list) = ctx {
+            pop_guild_queue(self.guild.clone()).await;
             check_msg(
                 self.chan_id
-                    .say(&self.http, &format!("Track ended: {}.", track_list.first().as_ref().unwrap().1.metadata().source_url.as_ref().unwrap()))
+                    .say(&self.http, &format!("Track ended: {}", track_list.first().as_ref().unwrap().1.metadata().source_url.as_ref().unwrap()))
                     .await,
             );
         }
-
-        None
-    }
-}
-
-struct ChannelDurationNotifier {
-    chan_id: ChannelId,
-    count: Arc<AtomicUsize>,
-    http: Arc<Http>,
-}
-
-#[async_trait]
-impl VoiceEventHandler for ChannelDurationNotifier {
-    async fn act(&self, _ctx: &EventContext<'_>) -> Option<Event> {
-        let count_before = self.count.fetch_add(1, Ordering::Relaxed);
-        check_msg(
-            self.chan_id
-                .say(
-                    &self.http,
-                    &format!(
-                        "I've been in this channel for {} minutes!",
-                        count_before + 1
-                    ),
-                )
-                .await,
-        );
 
         None
     }
@@ -251,31 +272,47 @@ impl VoiceEventHandler for ChannelDurationNotifier {
 
 #[command]
 #[only_in(guilds)]
-async fn leave(ctx: &Context, msg: &Message) -> CommandResult {
-    let guild = msg.guild(&ctx.cache).unwrap();
-    let guild_id = guild.id;
+async fn l(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return leave(ctx, msg, _args).await;
+}
 
-    let manager = songbird::get(ctx)
-        .await
-        .expect("Songbird Voice client placed in at initialisation.")
-        .clone();
-    let has_handler = manager.get(guild_id).is_some();
+#[command]
+#[only_in(guilds)]
+async fn leave(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    if msg.guild_id.is_some() {
+        let guild = msg.guild(&ctx.cache).unwrap();
+        let guild_id = guild.id;
 
-    if has_handler {
-        if let Err(e) = manager.remove(guild_id).await {
-            check_msg(
-                msg.channel_id
-                    .say(&ctx.http, format!("Failed: {:?}", e))
-                    .await,
-            );
+        let manager = songbird::get(ctx)
+            .await
+            .expect("Songbird Voice client placed in at initialisation.")
+            .clone();
+        let has_handler = manager.get(guild_id).is_some();
+
+        if has_handler {
+            if let Err(e) = manager.remove(guild_id).await {
+                check_msg(
+                    msg.channel_id
+                        .say(&ctx.http, format!("Failed: {:?}", e))
+                        .await,
+                );
+            }
+
+            check_msg(msg.channel_id.say(&ctx.http, "Left voice channel").await);
+
+            clear_guild_queue(guild).await;
+            set_joined(ctx, guild_id.into(), false).await;
+        } else {
+            check_msg(msg.reply(ctx, "Not in a voice channel").await);
         }
-
-        check_msg(msg.channel_id.say(&ctx.http, "Left voice channel").await);
-    } else {
-        check_msg(msg.reply(ctx, "Not in a voice channel").await);
     }
-
     Ok(())
+}
+
+#[command]
+#[only_in(guilds)]
+async fn m(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return mute(ctx, msg, _args).await;
 }
 
 #[command]
@@ -315,6 +352,12 @@ async fn mute(ctx: &Context, msg: &Message) -> CommandResult {
     }
 
     Ok(())
+}
+
+#[command]
+#[only_in(guilds)]
+async fn p(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return ping(ctx, msg, _args).await;
 }
 
 #[command]
@@ -455,6 +498,57 @@ impl VoiceEventHandler for SongEndNotifier {
     }
 }
 
+struct Periodic {
+    voice_chan_id: ChannelId,
+    chan_id: ChannelId,
+    http: Arc<Http>,
+    cache: Arc<Cache>,
+    ctx: Context,
+}
+
+#[async_trait]
+impl VoiceEventHandler for Periodic {
+    async fn act(&self, _ctx: &EventContext<'_>) -> Option<Event> {
+        let channel = self.http.get_channel(self.voice_chan_id.into()).await;
+        match channel.unwrap().guild() {
+            Some(guild_channel) => {
+                let members = guild_channel.members(&self.cache).await;
+
+                // please modularize this monstrocity
+                // what i mean by this is create some functions and call the functions instead
+                // we want to utilize DRY (DON'T REPEAT YOURSELF) principles
+                if members.unwrap().len() <= 1 {
+                    let manager = songbird::get(&self.ctx)
+                        .await
+                        .expect("Songbird Voice client placed in at initialisation.")
+                        .clone();
+
+                    let has_handler = manager.get(guild_channel.guild_id).is_some();
+
+                    if has_handler {
+                        if let Err(e) = manager.remove(guild_channel.guild_id).await {
+                            check_msg(
+                                self.chan_id
+                                    .say(&self.http, format!("Failed: {:?}", e))
+                                    .await,
+                            );
+                        }
+
+                        check_msg(self.chan_id.say(&self.http, "Left voice channel").await);
+                    } else {
+                        check_msg(self.chan_id.say(&self.http, "Not in a voice channel").await);
+                    }
+                }
+            },
+            None => {
+                println!("{}", "channel was none")
+            }
+        }
+
+        None
+    }
+}
+
 #[command]
 #[only_in(guilds)]
 async fn q(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
@@ -464,7 +558,9 @@ async fn q(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let og_args = args.clone();
+    // capture args before mutating
+    let og_args = &args.clone();
+
     let url = match args.single::<String>() {
         Ok(url) => url,
         Err(_) => {
@@ -518,24 +614,27 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             msg.channel_id
                 .say(
                     &ctx.http,
-                    format!("Added song to queue: position {}", handler.queue().len()),
+                    format!("Added song to queue: position {}", handler.queue().len()),  
                 )
                 .await,
         );
+
+        let mut queue = vec![];
+        for track_handle in handler.queue().current_queue() {
+            queue.push(track_handle.metadata().source_url.clone().unwrap())
+        }
+
+        update_guild_queue(guild, queue).await;
+
     } else {
         check_msg(
             msg.channel_id
-                .say(&ctx.http, "Not in a voice channel to play in")
+                .say(&ctx.http, "not in a voice channel to play in. attempting to join")
                 .await,
         );
-        match join(ctx, msg, og_args.clone()).await {
+        match join(ctx, msg, og_args.to_owned()).await {
             Ok(result) => {
-                /*check_msg(
-                    msg.channel_id
-                        .say(&ctx.http, og_args.clone().single::<String>().unwrap())
-                        .await,
-                );*/
-                match queue(ctx, msg, og_args.clone()).await {
+                match queue(ctx, msg, og_args.to_owned()).await {
                     Ok(result) => result,
                     Err(_why) => {
                         check_msg(
@@ -561,11 +660,12 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     Ok(())
 }
 
+
 #[command]
 #[only_in(guilds)]
 async fn s(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     return skip(ctx, msg, _args).await;
-}
+} 
 
 #[command]
 #[only_in(guilds)]
@@ -580,17 +680,18 @@ async fn skip(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     if let Some(handler_lock) = manager.get(guild_id) {
         let handler = handler_lock.lock().await;
-        let queue = handler.queue();
-        let _ = queue.skip();
+        let track_queue = handler.queue();
+        let _ = track_queue.skip();
 
         check_msg(
             msg.channel_id
                 .say(
                     &ctx.http,
-                    format!("Song skipped: {} in queue.", queue.len()),
+                    format!("Song skipped: {} in queue.", track_queue.len()),
                 )
                 .await,
         );
+
     } else {
         check_msg(
             msg.channel_id
@@ -627,10 +728,18 @@ async fn stop(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
     if let Some(handler_lock) = manager.get(guild_id) {
         let handler = handler_lock.lock().await;
-        let queue = handler.queue();
-        let _ = queue.stop();
+        let track_queue = handler.queue();
+        let _ = track_queue.stop();
 
         check_msg(msg.channel_id.say(&ctx.http, "Queue cleared.").await);
+
+        let mut queue = vec![];
+        for track_handle in handler.queue().current_queue() {
+            queue.push(track_handle.metadata().source_url.clone().unwrap())
+        }
+        
+        clear_guild_queue(guild).await;
+        
     } else {
         check_msg(
             msg.channel_id
@@ -640,6 +749,12 @@ async fn stop(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     }
 
     Ok(())
+}
+
+#[command]
+#[only_in(guilds)]
+async fn ud(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return undeafen(ctx, msg, _args).await;
 }
 
 #[command]
@@ -673,6 +788,12 @@ async fn undeafen(ctx: &Context, msg: &Message) -> CommandResult {
     }
 
     Ok(())
+}
+
+#[command]
+#[only_in(guilds)]
+async fn um(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+    return unmute(ctx, msg, _args).await;
 }
 
 #[command]
