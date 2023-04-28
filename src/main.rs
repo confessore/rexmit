@@ -173,7 +173,8 @@ async fn j(ctx: &Context, msg: &Message) -> CommandResult {
 #[only_in(guilds)]
 async fn join(ctx: &Context, msg: &Message) -> CommandResult {
     if msg.guild_id.is_some() {
-        let guild = msg.guild(&ctx.cache).unwrap();
+        let og_guild = msg.guild(&ctx.cache).unwrap();
+        let guild = og_guild.clone();
         let guild_id = guild.id;
 
         let channel_id = guild
@@ -227,6 +228,7 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
             handle.add_global_event(
                 Event::Periodic(Duration::from_secs(1800), None),
                 Periodic {
+                    guild: og_guild,
                     voice_chan_id: connect_to,
                     chan_id,
                     http: send_http,
@@ -499,6 +501,7 @@ impl VoiceEventHandler for SongEndNotifier {
 }
 
 struct Periodic {
+    guild: serenity::model::prelude::Guild,
     voice_chan_id: ChannelId,
     chan_id: ChannelId,
     http: Arc<Http>,
@@ -535,6 +538,15 @@ impl VoiceEventHandler for Periodic {
                         }
 
                         check_msg(self.chan_id.say(&self.http, "Left voice channel").await);
+                        match guild_channel.guild(&self.cache) {
+                            Some(guild) => {
+                                clear_guild_queue(guild).await;
+                            },
+                            None => {
+
+                            }
+                        };
+                        set_joined(&self.ctx, guild_channel.guild_id.into(), false).await;
                     } else {
                         check_msg(self.chan_id.say(&self.http, "Not in a voice channel").await);
                     }
