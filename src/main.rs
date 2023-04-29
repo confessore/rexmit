@@ -20,7 +20,7 @@ use std::{
 use mongodb::{
     bson::{doc, }
 };
-use rexmit::{models::{guild::Guild}, database::{get_guild_collection, update_guild_queue, clear_guild_queue, set_joined, pop_guild_queue}};
+use rexmit::{models::{guild::Guild}, database::{get_guild_collection, update_guild_queue, clear_guild_queue, set_joined, pop_guild_queue, find_joined_channels}};
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler, Cache},
@@ -57,6 +57,7 @@ impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         ctx.set_activity(Activity::listening("~q <youtube url>")).await;
         println!("{} is connected!", ready.user.name);
+        find_joined_channels().await;
     }
 
     /*async fn voice_state_update(&self, _ctx: Context, _old: Option<VoiceState>, _new: VoiceState) {

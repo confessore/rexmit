@@ -151,3 +151,39 @@ pub async fn set_joined(ctx: &Context, guild_id: u64, joined: bool) -> bool {
     println!("unable to set joined status");
     return false;
 }
+
+
+// wip
+// some repeating here, consider modularizing by creating additional functions
+pub async fn find_joined_channels() {
+    let collection_option = get_guild_collection().await;
+    if collection_option.is_some() {
+        println!("{}", "collection is some");
+        let collection = collection_option.unwrap();
+        let filter = doc! { "joined": true };
+        let cursor_result = collection.find(filter, None).await;
+        if cursor_result.is_ok() {
+            println!("{}", "cursor result is ok");
+            let mut guilds: Vec<String> = vec![];
+            let mut cursor = cursor_result.unwrap();
+            while let Ok(cursor_is_open) = cursor.advance().await {
+                println!("cursor result is ok and it is {} that the cursor is open", cursor_is_open);
+                if !cursor_is_open {
+                    break;
+                }
+
+                if cursor_is_open {
+                    let guild_result = cursor.deserialize_current();
+                    if guild_result.is_ok() {
+                        println!("{}", "guild result is ok");
+                        let guild = guild_result.unwrap();
+                        guilds.push(guild.id);
+                    }
+                }
+            }
+            for guild in guilds {
+                println!("{}", guild);
+            }
+        }
+    }
+}
