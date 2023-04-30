@@ -20,7 +20,7 @@ use std::{
 use mongodb::{
     bson::{doc, }
 };
-use rexmit::{models::{guild::Guild}, database::{get_guild_collection, update_guild_queue, clear_guild_queue, set_joined, pop_guild_queue, find_joined_guilds, get_guild_queue}};
+use rexmit::{models::{guild::Guild}, database::{get_guild_collection, update_guild_queue, clear_guild_queue, set_joined_to_channel, pop_guild_queue, get_guilds_joined_to_channel, get_guild_queue}};
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler, Cache},
@@ -58,7 +58,7 @@ impl EventHandler for Handler {
         ctx.set_activity(Activity::listening("~q <youtube url>")).await;
         println!("{} is connected!", ready.user.name);
         //checking guild queues, could use better naming
-        let joined_guilds_option = find_joined_guilds().await;
+        let joined_guilds_option = get_guilds_joined_to_channel().await;
         if joined_guilds_option.is_some() {
             let joined_guilds = joined_guilds_option.unwrap();
             for joined_guild in joined_guilds {
@@ -251,7 +251,7 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                 },
             );
 
-            set_joined(ctx, guild_id.into(), true).await;
+            set_joined_to_channel(ctx, guild_id.into(), true).await;
 
         } else {
             check_msg(
@@ -317,7 +317,7 @@ async fn leave(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             check_msg(msg.channel_id.say(&ctx.http, "Left voice channel").await);
 
             clear_guild_queue(guild).await;
-            set_joined(ctx, guild_id.into(), false).await;
+            set_joined_to_channel(ctx, guild_id.into(), false).await;
         } else {
             check_msg(msg.reply(ctx, "Not in a voice channel").await);
         }
@@ -560,7 +560,7 @@ impl VoiceEventHandler for Periodic {
 
                             }
                         };
-                        set_joined(&self.ctx, guild_channel.guild_id.into(), false).await;
+                        set_joined_to_channel(&self.ctx, guild_channel.guild_id.into(), false).await;
                     } else {
                         check_msg(self.chan_id.say(&self.http, "Not in a voice channel").await);
                     }

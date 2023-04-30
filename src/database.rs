@@ -119,14 +119,14 @@ pub async fn pop_guild_queue(guild: serenity::model::prelude::Guild) {
     }
 }
 
-pub async fn set_joined(ctx: &Context, guild_id: u64, joined: bool) -> bool {
+pub async fn set_joined_to_channel(ctx: &Context, guild_id: u64, joined: bool) -> bool {
     let collection_option = get_guild_collection().await;
     if collection_option.is_some() {
         let collection = collection_option.unwrap();
         let partial_guild_option = context_get_guild(ctx, guild_id.into()).await;
         if partial_guild_option.is_some() {
             let guild = Guild::new_from_serenity_partial_guild(partial_guild_option);
-            let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "joined": joined }}, None).await;
+            let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "joined_to_channel": joined }}, None).await;
     
             println!("{:?}", result);
             match &result {
@@ -155,12 +155,12 @@ pub async fn set_joined(ctx: &Context, guild_id: u64, joined: bool) -> bool {
 
 // wip
 // some repeating here, consider modularizing by creating additional functions
-pub async fn find_joined_guilds() -> Option<Vec<String>> {
+pub async fn get_guilds_joined_to_channel() -> Option<Vec<String>> {
     let collection_option = get_guild_collection().await;
     if collection_option.is_some() {
         println!("{}", "collection is some");
         let collection = collection_option.unwrap();
-        let filter = doc! { "joined": true };
+        let filter = doc! { "joined_to_channel": true };
         let cursor_result = collection.find(filter, None).await;
         if cursor_result.is_ok() {
             println!("{}", "cursor result is ok");
@@ -190,12 +190,12 @@ pub async fn find_joined_guilds() -> Option<Vec<String>> {
     return None;
 }
 
-pub async fn get_guild_queue(id: String) -> Option<Vec<String>> {
+pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
     let collection_option = get_guild_collection().await;
     if collection_option.is_some() {
         println!("{}", "collection is some");
         let collection = collection_option.unwrap();
-        let filter = doc! { "id": id };
+        let filter = doc! { "id": guild_id };
         let guild_option_result = collection.find_one(filter, None).await;
         if guild_option_result.is_ok() {
             let guild_option = guild_option_result.unwrap();
