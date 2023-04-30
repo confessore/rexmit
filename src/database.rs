@@ -34,6 +34,48 @@ pub async fn get_guild_collection() -> Option<Collection<Guild>> {
     return None;
 }
 
+// more comments in the code
+// more debug prints
+// maybe some documentation to describe functions
+pub async fn get_guild_document(guild_id: String) -> Option<Guild> {
+    let guild_collection_option = get_guild_collection().await;
+    match guild_collection_option {
+        Some(guild_collection) => {
+            let filter = doc! { "id": &guild_id };
+            let update = doc! { "$pop": { "queue": -1 }};
+            let result = guild_collection.find_one_and_update(filter, update, None).await;
+            match result {
+                Ok(guild_option) => {
+                    match guild_option {
+                        Some(guild) => {
+                            return Some(guild);
+                        }, 
+                        None => {
+                            let guild = Guild::new(guild_id);
+                            let insert_one_result_result = guild_collection.insert_one(&guild, None).await;
+                            match insert_one_result_result {
+                                Ok(_insert_one_result) => {
+                                    return Some(guild)},
+                                Err(why) => {
+                                    println!("{}", why);
+                                    return None;
+                                }
+                            }
+                        }
+                    }
+                },
+                Err(why) => {
+                    println!("{}", why);
+                    return None;
+                }
+            }
+        },
+        None => {
+            return None;
+        }
+    }
+}
+
 pub async fn update_guild_queue(guild: serenity::model::prelude::Guild, queue: Vec<String>) {
     let collection_option = get_guild_collection().await;
     if collection_option.is_some() {

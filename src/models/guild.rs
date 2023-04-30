@@ -13,6 +13,13 @@ pub struct Guild {
 }
 
 impl Guild {
+    pub fn new(guild_id: String) -> Guild {
+        Guild {
+            id: guild_id,
+            ..Default::default() 
+        }
+    }
+
     pub fn new_from_serenity_partial_guild(partial_guild_option: Option<PartialGuild>) -> Guild {
         match &partial_guild_option {
             Some(partial_guild) => {
