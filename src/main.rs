@@ -20,7 +20,7 @@ use std::{
 use mongodb::{
     bson::{doc, }
 };
-use rexmit::{models::{guild::Guild}, database::{get_guild_collection, update_guild_queue, clear_guild_queue, set_joined, pop_guild_queue, find_joined_channels}};
+use rexmit::{models::{guild::Guild}, database::{get_guild_collection, update_guild_queue, clear_guild_queue, set_joined, pop_guild_queue, find_joined_guilds, get_guild_queue}};
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler, Cache},
@@ -57,7 +57,20 @@ impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         ctx.set_activity(Activity::listening("~q <youtube url>")).await;
         println!("{} is connected!", ready.user.name);
-        find_joined_channels().await;
+        //checking guild queues, could use better naming
+        let joined_guilds_option = find_joined_guilds().await;
+        if joined_guilds_option.is_some() {
+            let joined_guilds = joined_guilds_option.unwrap();
+            for joined_guild in joined_guilds {
+                let guild_queue_option = get_guild_queue(joined_guild).await;
+                if guild_queue_option.is_some() {
+                    let guild_queue = guild_queue_option.unwrap();
+                    for url in guild_queue {
+                        println!("{}", url);
+                    }
+                }
+            }
+        }
     }
 
     /*async fn voice_state_update(&self, _ctx: Context, _old: Option<VoiceState>, _new: VoiceState) {

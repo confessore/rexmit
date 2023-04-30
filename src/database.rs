@@ -155,7 +155,7 @@ pub async fn set_joined(ctx: &Context, guild_id: u64, joined: bool) -> bool {
 
 // wip
 // some repeating here, consider modularizing by creating additional functions
-pub async fn find_joined_channels() {
+pub async fn find_joined_guilds() -> Option<Vec<String>> {
     let collection_option = get_guild_collection().await;
     if collection_option.is_some() {
         println!("{}", "collection is some");
@@ -181,11 +181,13 @@ pub async fn find_joined_channels() {
                     }
                 }
             }
-            for guild in guilds {
+            for guild in &guilds {
                 println!("{}", guild);
             }
+            return Some(guilds);
         }
     }
+    return None;
 }
 
 pub async fn get_guild_queue(id: String) -> Option<Vec<String>> {
