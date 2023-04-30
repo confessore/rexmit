@@ -8,7 +8,7 @@ pub struct Guild {
     pub subscribed: bool,
     pub expiration: i64,
     pub joined_to_channel: bool,
-    pub joined_channel: String,
+    pub joined_channel_id: String,
     pub queue: Vec<String>
 }
 
