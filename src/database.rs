@@ -50,19 +50,31 @@ pub async fn get_guild_document(guild_id: String) -> Option<Guild> {
                             return Some(guild);
                         }, 
                         None => {
-                            let guild = Guild::new(guild_id);
-                            let insert_one_result_result = guild_collection.insert_one(&guild, None).await;
-                            match insert_one_result_result {
-                                Ok(_insert_one_result) => {
-                                    return Some(guild)},
-                                Err(why) => {
-                                    println!("{}", why);
-                                    return None;
-                                }
-                            }
+                            return insert_new_guild(guild_id).await;
                         }
                     }
                 },
+                Err(why) => {
+                    println!("{}", why);
+                    return None;
+                }
+            }
+        },
+        None => {
+            return None;
+        }
+    }
+}
+
+pub async fn insert_new_guild(guild_id: String) -> Option<Guild> {
+    let guild_collection_option = get_guild_collection().await;
+    match guild_collection_option {
+        Some(guild_collection) => {
+            let guild = Guild::new(guild_id);
+            let insert_one_result_result = guild_collection.insert_one(&guild, None).await;
+            match insert_one_result_result {
+                Ok(_insert_one_result) => {
+                    return Some(guild)},
                 Err(why) => {
                     println!("{}", why);
                     return None;
