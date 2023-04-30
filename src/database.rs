@@ -89,13 +89,13 @@ pub async fn get_guild_document(guild_id: String) -> Option<Guild> {
 /// 
 /// some guild or none
 /// 
-pub async fn set_guild_document(guild: Guild) -> Option<Guild> {
+pub async fn set_guild_document(guild: &Guild) -> Option<Guild> {
     let guild_collection_option = get_guild_collection().await;
     match &guild_collection_option {
         Some(guild_collection) => {
             println!("guild collection option is some");
             let filter = doc! { "id": &guild.id };
-            let guild_option_result = guild_collection.find_one_and_replace(filter, &guild, None).await;
+            let guild_option_result = guild_collection.find_one_and_replace(filter, guild, None).await;
             match guild_option_result {
                 Ok(guild_option) => {
                     println!("guild option result is ok");
@@ -106,7 +106,7 @@ pub async fn set_guild_document(guild: Guild) -> Option<Guild> {
                         }, 
                         None => {
                             println!("guild is none");
-                            return insert_new_guild(&guild_collection_option, guild.id).await;
+                            return insert_new_guild(&guild_collection_option, guild.id.to_string()).await;
                         }
                     }
                 },
@@ -373,8 +373,7 @@ pub async fn set_guild_queue(guild_id: String, queue: Vec<String>) -> Option<Vec
     match guild_option {
         Some(mut guild) => {
             guild.queue = queue;
-
-
+            set_guild_document(&guild).await;
             return Some(guild.queue)
         },
         None =>
