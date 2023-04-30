@@ -34,39 +34,7 @@ pub async fn get_guild_collection() -> Option<Collection<Guild>> {
     return None;
 }
 
-// more comments in the code
-// more debug prints
-// maybe some documentation to describe functions
-pub async fn get_guild_document(guild_id: String) -> Option<Guild> {
-    let guild_collection_option = get_guild_collection().await;
-    match guild_collection_option {
-        Some(guild_collection) => {
-            let filter = doc! { "id": &guild_id };
-            let guild_option_result = guild_collection.find_one(filter, None).await;
-            match guild_option_result {
-                Ok(guild_option) => {
-                    match guild_option {
-                        Some(guild) => {
-                            return Some(guild);
-                        }, 
-                        None => {
-                            return insert_new_guild(guild_id).await;
-                        }
-                    }
-                },
-                Err(why) => {
-                    println!("{}", why);
-                    return None;
-                }
-            }
-        },
-        None => {
-            return None;
-        }
-    }
-}
-
-/// inserts a new guild document into mongo given a discord guild id
+/// gets a guild document from mongo given a discord guild id
 ///
 /// ### arguments
 /// 
@@ -76,8 +44,98 @@ pub async fn get_guild_document(guild_id: String) -> Option<Guild> {
 /// 
 /// some guild or none
 /// 
-pub async fn insert_new_guild(guild_id: String) -> Option<Guild> {
+pub async fn get_guild_document(guild_id: String) -> Option<Guild> {
     let guild_collection_option = get_guild_collection().await;
+    match &guild_collection_option {
+        Some(guild_collection) => {
+            println!("guild collection option is some");
+            let filter = doc! { "id": &guild_id };
+            let guild_option_result = guild_collection.find_one(filter, None).await;
+            match guild_option_result {
+                Ok(guild_option) => {
+                    println!("guild option result is ok");
+                    match guild_option {
+                        Some(guild) => {
+                            println!("guild is some");
+                            return Some(guild);
+                        }, 
+                        None => {
+                            println!("guild is none");
+                            return insert_new_guild(&guild_collection_option, guild_id).await;
+                        }
+                    }
+                },
+                Err(why) => {
+                    println!("guild option result is err");
+                    println!("{}", why);
+                    return None;
+                }
+            }
+        },
+        None => {
+            println!("guild collection option is none");
+            return None;
+        }
+    }
+}
+
+/// sets a guild document in mongo given a guild
+///
+/// ### arguments
+/// 
+/// * `guild` - the rexmit guild model
+/// 
+/// ### returns 
+/// 
+/// some guild or none
+/// 
+pub async fn set_guild_document(guild: Guild) -> Option<Guild> {
+    let guild_collection_option = get_guild_collection().await;
+    match &guild_collection_option {
+        Some(guild_collection) => {
+            println!("guild collection option is some");
+            let filter = doc! { "id": &guild.id };
+            let guild_option_result = guild_collection.find_one_and_replace(filter, &guild, None).await;
+            match guild_option_result {
+                Ok(guild_option) => {
+                    println!("guild option result is ok");
+                    match guild_option {
+                        Some(guild) => {
+                            println!("guild is some");
+                            return Some(guild);
+                        }, 
+                        None => {
+                            println!("guild is none");
+                            return insert_new_guild(&guild_collection_option, guild.id).await;
+                        }
+                    }
+                },
+                Err(why) => {
+                    println!("guild option result is err");
+                    println!("{}", why);
+                    return None;
+                }
+            }
+        },
+        None => {
+            println!("guild collection option is none");
+            return None;
+        }
+    }
+}
+
+/// inserts a new guild document into mongo given a discord guild id
+///
+/// ### arguments
+/// 
+/// * `guild_collection_option` - the mongo guild collection option reference
+/// * `guild_id` - the discord issued id for the guild
+/// 
+/// ### returns 
+/// 
+/// some guild or none
+/// 
+pub async fn insert_new_guild(guild_collection_option: &Option<Collection<Guild>>, guild_id: String) -> Option<Guild> {
     match guild_collection_option {
         Some(guild_collection) => {
             let guild = Guild::new(guild_id);
@@ -265,7 +323,7 @@ pub async fn get_guilds_joined_to_channel() -> Option<Vec<String>> {
 /// 
 pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
     let guild_collection_option = get_guild_collection().await;
-    match guild_collection_option {
+    match &guild_collection_option {
         Some(guild_collection) => {
             println!("guild collection option is some");
             let filter = doc! { "id": &guild_id };
@@ -280,7 +338,7 @@ pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
                         }, 
                         None => {
                             println!("guild option is none");
-                            insert_new_guild(guild_id).await;
+                            insert_new_guild(&guild_collection_option, guild_id).await;
                             return None;
                         }
                     }
@@ -311,7 +369,20 @@ pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
 /// some vector of string track urls
 /// 
 pub async fn set_guild_queue(guild_id: String, queue: Vec<String>) -> Option<Vec<String>> {
-    let guild_collection_option = get_guild_collection().await;
+    let guild_option = get_guild_document(guild_id).await;
+    match guild_option {
+        Some(mut guild) => {
+            guild.queue = queue;
+
+
+            return Some(guild.queue)
+        },
+        None =>
+        {
+            return None;
+        }
+    }
+    /*let guild_collection_option = get_guild_collection().await;
     match guild_collection_option {
         Some(guild_collection) => {
             let filter = doc! { "id": &guild_id };
@@ -339,5 +410,5 @@ pub async fn set_guild_queue(guild_id: String, queue: Vec<String>) -> Option<Vec
         None => {
             return None;
         }
-    }
+    }*/
 }
