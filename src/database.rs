@@ -66,6 +66,16 @@ pub async fn get_guild_document(guild_id: String) -> Option<Guild> {
     }
 }
 
+/// inserts a new guild document into mongo given a discord guild id
+///
+/// ### arguments
+/// 
+/// * `guild_id` - the discord issued id for the guild
+/// 
+/// ### returns 
+/// 
+/// some guild or none
+/// 
 pub async fn insert_new_guild(guild_id: String) -> Option<Guild> {
     let guild_collection_option = get_guild_collection().await;
     match guild_collection_option {
