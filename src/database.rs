@@ -187,3 +187,22 @@ pub async fn find_joined_channels() {
         }
     }
 }
+
+pub async fn get_guild_queue(id: String) -> Option<Vec<String>> {
+    let collection_option = get_guild_collection().await;
+    if collection_option.is_some() {
+        println!("{}", "collection is some");
+        let collection = collection_option.unwrap();
+        let filter = doc! { "id": id };
+        let guild_option_result = collection.find_one(filter, None).await;
+        if guild_option_result.is_ok() {
+            let guild_option = guild_option_result.unwrap();
+            if guild_option.is_some() {
+                let guild = guild_option.unwrap();
+                println!("{}", "cursor result is ok");
+                return Some(guild.queue);
+            }
+        }
+    }
+    return None;
+}
