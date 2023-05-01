@@ -1,14 +1,24 @@
 use serde::{Serialize, Deserialize};
 use serenity::model::prelude::PartialGuild;
 
+
 #[derive(Default, Debug, Serialize, Deserialize)]
+#[serde(default)]
+
 pub struct Guild {
+    #[serde(default)]
     pub id: String,
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub subscribed: bool,
+    #[serde(default)]
     pub expiration: i64,
+    #[serde(default)]
     pub joined_to_channel: bool,
+    #[serde(default)]
     pub joined_channel_id: String,
+    #[serde(default)]
     pub queue: Vec<String>
 }
 
