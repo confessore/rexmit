@@ -277,38 +277,52 @@ pub async fn set_joined_to_channel(ctx: &Context, guild_id: u64, joined: bool) -
 // wip
 // some repeating here, consider modularizing by creating additional functions
 pub async fn get_guilds_joined_to_channel() -> Option<Vec<String>> {
-    let collection_option = get_guild_collection().await;
-    if collection_option.is_some() {
-        println!("{}", "collection is some");
-        let collection = collection_option.unwrap();
-        let filter = doc! { "joined_to_channel": true };
-        let cursor_result = collection.find(filter, None).await;
-        if cursor_result.is_ok() {
-            println!("{}", "cursor result is ok");
-            let mut guilds: Vec<String> = vec![];
-            let mut cursor = cursor_result.unwrap();
-            while let Ok(cursor_is_open) = cursor.advance().await {
-                println!("cursor result is ok and it is {} that the cursor is open", cursor_is_open);
-                if !cursor_is_open {
-                    break;
-                }
-
-                if cursor_is_open {
-                    let guild_result = cursor.deserialize_current();
-                    if guild_result.is_ok() {
-                        println!("{}", "guild result is ok");
-                        let guild = guild_result.unwrap();
-                        guilds.push(guild.id);
+    let guild_collection_option = get_guild_collection().await;
+    match guild_collection_option {
+        Some(guild_collection) => {
+            println!("{}", "guild collection is some");
+            let filter = doc! { "joined_to_channel": true };
+            let cursor_result = guild_collection.find(filter, None).await;
+            match cursor_result {
+                Ok(mut cursor) => {
+                    println!("{}", "cursor result is ok");
+                    let mut guilds: Vec<String> = vec![];
+                    while let Ok(cursor_is_open) = cursor.advance().await {
+                        println!("cursor result is ok and it is {} that the cursor is open", cursor_is_open);
+                        if !cursor_is_open {
+                            break;
+                        }
+                        if cursor_is_open {
+                            let guild_result = cursor.deserialize_current();
+                            match guild_result {
+                                Ok(guild) => {
+                                    println!("{}", "guild result is ok");
+                                    guilds.push(guild.id);
+                                },
+                                Err(why) => {
+                                    println!("{}", "guild result is err");
+                                    println!("{}", why)
+                                }
+                            }
+                        }
                     }
+                    for guild in &guilds {
+                        println!("{}", guild);
+                    }
+                    return Some(guilds);
+                },
+                Err(why) => {
+                    println!("{}", "cursor result is err");
+                    println!("{}", why);
+                    return None;
                 }
             }
-            for guild in &guilds {
-                println!("{}", guild);
-            }
-            return Some(guilds);
+        },
+        None => {
+            println!("{}", "guild collection is none");
+            return None;
         }
     }
-    return None;
 }
 
 /// gets a guild queue in mongo given a guild id
