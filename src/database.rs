@@ -138,18 +138,22 @@ pub async fn set_guild_document(guild: &Guild) -> Option<Guild> {
 pub async fn insert_new_guild(guild_collection_option: &Option<Collection<Guild>>, guild_id: String) -> Option<Guild> {
     match guild_collection_option {
         Some(guild_collection) => {
+            println!("guild collection option reference is some");
             let guild = Guild::new(guild_id);
             let insert_one_result_result = guild_collection.insert_one(&guild, None).await;
             match insert_one_result_result {
                 Ok(_insert_one_result) => {
+                    println!("insert one result result is ok");
                     return Some(guild)},
                 Err(why) => {
+                    println!("insert one result result is err");
                     println!("{}", why);
                     return None;
                 }
             }
         },
         None => {
+            println!("guild collection option reference is none");
             return None;
         }
     }
