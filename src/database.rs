@@ -5,9 +5,8 @@ use mongodb::{
     Client as MongoClient,
     Collection, Database, bson::doc
 };
-use serenity::prelude::Context;
 
-use crate::{models::guild::Guild, context::context_get_guild};
+use crate::models::guild::Guild;
 
 
 /// gets the rexmit database from mongo
@@ -299,37 +298,60 @@ pub async fn pop_guild_queue(guild_id: String) -> Option<Guild> {
     }
 }
 
-pub async fn set_joined_to_channel(ctx: &Context, guild_id: u64, joined: bool) -> bool {
-    let collection_option = get_guild_collection().await;
-    if collection_option.is_some() {
-        let collection = collection_option.unwrap();
-        let partial_guild_option = context_get_guild(ctx, guild_id.into()).await;
-        if partial_guild_option.is_some() {
-            let guild = Guild::new_from_serenity_partial_guild(partial_guild_option);
-            let result = collection.find_one_and_update(doc! { "id": &guild_id.to_string() }, doc! { "$set": { "joined_to_channel": joined }}, None).await;
-    
-            println!("{:?}", result);
-            match &result {
-                Ok(option) => {
-                    match &option {
+/// sets a guild's joined to channel status as well as a guild's joined channel id
+///
+/// ### arguments
+/// 
+/// * `guild_id` - the discord issued id for the guild
+/// * `channel_id_option` - some string discord channel id or none
+/// 
+/// ### returns 
+/// 
+/// some guild or none
+/// 
+pub async fn set_joined_to_channel(guild_id: String, channel_id_option: Option<String>) -> Option<Guild> {
+    let guild_collection_option = get_guild_collection().await;
+    match &guild_collection_option {
+        Some(guild_collection) => {
+            println!("guild collection option is some");
+            let filter = doc! { "id": &guild_id };
+            let mut update = doc! { "$set": { "joined_to_channel": false, "joined_channel_id": "" }};
+            match channel_id_option {
+                Some(channel_id) => {
+                    println!("channel id option is some");
+                    update = doc! { "$set": { "joined_to_channel": true, "joined_channel_id": channel_id }};
+                },
+                None => {
+                    println!("channel id option is none");
+                }
+            }
+            let guild_option_result = guild_collection.find_one_and_update(filter, update, None).await;
+            match guild_option_result {
+                Ok(guild_option) => {
+                    match guild_option {
                         Some(guild) => {
-                            println!("{:?}", guild);
+                            println!("guild option is some");
+                            return Some(guild);
                         }, 
                         None => {
-                            let result = collection.insert_one(&guild, None).await;
-                            println!("{:?}", result);
+                            println!("guild option is none");
+                            let guild_option = insert_new_guild(&guild_collection_option, guild_id).await;
+                            return guild_option;
                         }
                     }
                 },
                 Err(why) => {
+                    println!("guild option result is err");
                     println!("{}", why);
+                    return None;
                 }
             }
-            return true;
+        },
+        None => {
+            println!("guild collection option is none");
+            return None;
         }
     }
-    println!("unable to set joined status");
-    return false;
 }
 
 

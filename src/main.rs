@@ -240,15 +240,15 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
             handle.add_global_event(
                 Event::Periodic(Duration::from_secs(1800), None),
                 Periodic {
-                    voice_chan_id: connect_to,
-                    chan_id,
+                    voice_channel_id: connect_to,
+                    message_channel_id: chan_id,
                     http: send_http,
                     cache: send_cache,
                     ctx: ctx.clone()
                 },
             );
 
-            set_joined_to_channel(ctx, guild_id.into(), true).await;
+            set_joined_to_channel(guild_id.to_string(), Some(connect_to.to_string())).await;
 
         } else {
             check_msg(
@@ -314,7 +314,7 @@ async fn leave(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             check_msg(msg.channel_id.say(&ctx.http, "Left voice channel").await);
 
             clear_guild_queue(guild).await;
-            set_joined_to_channel(ctx, guild_id.into(), false).await;
+            set_joined_to_channel(guild_id.to_string(), None).await;
         } else {
             check_msg(msg.reply(ctx, "Not in a voice channel").await);
         }
@@ -512,8 +512,8 @@ impl VoiceEventHandler for SongEndNotifier {
 }
 
 struct Periodic {
-    voice_chan_id: ChannelId,
-    chan_id: ChannelId,
+    voice_channel_id: ChannelId,
+    message_channel_id: ChannelId,
     http: Arc<Http>,
     cache: Arc<Cache>,
     ctx: Context,
@@ -522,7 +522,7 @@ struct Periodic {
 #[async_trait]
 impl VoiceEventHandler for Periodic {
     async fn act(&self, _ctx: &EventContext<'_>) -> Option<Event> {
-        let channel = self.http.get_channel(self.voice_chan_id.into()).await;
+        let channel = self.http.get_channel(self.voice_channel_id.into()).await;
         match channel.unwrap().guild() {
             Some(guild_channel) => {
                 let members = guild_channel.members(&self.cache).await;
@@ -541,13 +541,13 @@ impl VoiceEventHandler for Periodic {
                     if has_handler {
                         if let Err(e) = manager.remove(guild_channel.guild_id).await {
                             check_msg(
-                                self.chan_id
+                                self.message_channel_id
                                     .say(&self.http, format!("Failed: {:?}", e))
                                     .await,
                             );
                         }
 
-                        check_msg(self.chan_id.say(&self.http, "Left voice channel").await);
+                        check_msg(self.message_channel_id.say(&self.http, "Left voice channel").await);
                         match guild_channel.guild(&self.cache) {
                             Some(guild) => {
                                 clear_guild_queue(guild).await;
@@ -556,14 +556,14 @@ impl VoiceEventHandler for Periodic {
 
                             }
                         };
-                        set_joined_to_channel(&self.ctx, guild_channel.guild_id.into(), false).await;
+                        set_joined_to_channel(guild_channel.guild_id.to_string(), None).await;
                     } else {
-                        check_msg(self.chan_id.say(&self.http, "Not in a voice channel").await);
+                        check_msg(self.message_channel_id.say(&self.http, "Not in a voice channel").await);
                     }
                 }
             },
             None => {
-                println!("{}", "channel was none")
+                println!("{}", "channel is none")
             }
         }
 
