@@ -307,7 +307,9 @@ pub async fn pop_guild_queue(guild_id: String) -> Option<Guild> {
     match &guild_collection_option {
         Some(guild_collection) => {
             println!("guild collection option is some");
-            let guild_option_result = guild_collection.find_one_and_update(doc! { "id": &guild_id }, doc! { "$pop": { "queue": -1 }}, None).await;
+            let filter = doc! { "id": &guild_id };
+            let update = doc! { "$pop": { "queue": -1 }};
+            let guild_option_result = guild_collection.find_one_and_update(filter, update, None).await;
             match guild_option_result {
                 Ok(guild_option) => {
                     println!("guild option result is ok");
