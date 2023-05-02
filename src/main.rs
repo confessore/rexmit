@@ -312,8 +312,7 @@ async fn leave(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             }
 
             check_msg(msg.channel_id.say(&ctx.http, "Left voice channel").await);
-
-            clear_guild_queue(guild).await;
+            clear_guild_queue(guild_id.to_string()).await;
             set_joined_to_channel(guild_id.to_string(), None).await;
         } else {
             check_msg(msg.reply(ctx, "Not in a voice channel").await);
@@ -550,7 +549,7 @@ impl VoiceEventHandler for Periodic {
                         check_msg(self.message_channel_id.say(&self.http, "Left voice channel").await);
                         match guild_channel.guild(&self.cache) {
                             Some(guild) => {
-                                clear_guild_queue(guild).await;
+                                clear_guild_queue(guild_channel.guild_id.to_string()).await;
                             },
                             None => {
 
@@ -760,7 +759,7 @@ async fn stop(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             queue.push(track_handle.metadata().source_url.clone().unwrap())
         }
         
-        clear_guild_queue(guild).await;
+        clear_guild_queue(guild_id.to_string()).await;
         
     } else {
         check_msg(

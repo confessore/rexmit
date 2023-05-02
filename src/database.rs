@@ -225,30 +225,50 @@ pub async fn update_guild_queue(guild: serenity::model::prelude::Guild, queue: V
     }
 }
 
-pub async fn clear_guild_queue(guild: serenity::model::prelude::Guild) {
-    let collection_option = get_guild_collection().await;
-    if collection_option.is_some() {
-        let collection = collection_option.unwrap();
-        let guild = Guild::new_from_serenity_guild(Some(guild));
-        
-        let result = collection.find_one_and_update(doc! { "id": &guild.id.to_string() }, doc! { "$set": { "queue": &guild.queue }}, None).await;
-
-        println!("{:?}", result);
-        match &result {
-            Ok(option) => {
-                match &option {
-                    Some(guild) => {
-                        println!("{:?}", guild);
-                    }, 
-                    None => {
-                        let result = collection.insert_one(&guild, None).await;
-                        println!("{:?}", result)
+/// clears a guild's queue in mongo given a discord guild id
+///
+/// ### arguments
+/// 
+/// * `guild_id` - the discord issued id for the guild
+/// 
+/// ### returns 
+/// 
+/// some guild or none
+/// 
+pub async fn clear_guild_queue(guild_id: String) -> Option<Guild> {
+    let guild_collection_option = get_guild_collection().await;
+    match &guild_collection_option {
+        Some(guild_collection) => {
+            println!("guild collection option is some");
+            let filter = doc! { "id": &guild_id };
+            let queue: Vec<String> = vec![];
+            let update = doc! { "$set": { "queue": queue }};
+            let guild_option_result = guild_collection.find_one_and_update(filter, update, None).await;
+            match guild_option_result {
+                Ok(guild_option) => {
+                    println!("guild option result is ok");
+                    match guild_option {
+                        Some(guild) => {
+                            println!("guild option is some");
+                            return Some(guild);
+                        },
+                        None => {
+                            println!("guild option is none");
+                            let guild_option = insert_new_guild(&guild_collection_option, guild_id).await;
+                            return guild_option;
+                        }
                     }
+                },
+                Err(why) => {
+                    println!("guild option result is err");
+                    println!("{}", why);
+                    return None;
                 }
-            },
-            Err(why) => {
-                println!("{}", why)
             }
+        },
+        None => {
+            println!("guild collection option is none");
+            return None;
         }
     }
 }
@@ -355,7 +375,16 @@ pub async fn set_joined_to_channel(guild_id: String, channel_id_option: Option<S
     }
 }
 
-
+/// gets guilds that are found to be joined to channel in mongo
+///
+/// ### arguments
+/// 
+/// * `none` - none
+/// 
+/// ### returns 
+/// 
+/// some vector of string or none
+/// 
 pub async fn get_guilds_joined_to_channel() -> Option<Vec<String>> {
     let guild_collection_option = get_guild_collection().await;
     match guild_collection_option {
