@@ -339,9 +339,6 @@ pub async fn get_guilds_joined_to_channel() -> Option<Vec<String>> {
                             }
                         }
                     }
-                    for guild in &guilds {
-                        println!("{}", guild);
-                    }
                     return Some(guilds);
                 },
                 Err(why) => {
