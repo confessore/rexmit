@@ -18,7 +18,7 @@ use std::{
 };
 
 
-use rexmit::{database::{update_guild_queue, clear_guild_queue, set_joined_to_channel, pop_guild_queue, get_guilds_joined_to_channel, get_guild_queue}};
+use rexmit::{database::{set_guild_queue, clear_guild_queue, set_joined_to_channel, pop_guild_queue, get_guilds_joined_to_channel, get_guild_queue}};
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler, Cache},
@@ -548,7 +548,7 @@ impl VoiceEventHandler for Periodic {
 
                         check_msg(self.message_channel_id.say(&self.http, "Left voice channel").await);
                         match guild_channel.guild(&self.cache) {
-                            Some(guild) => {
+                            Some(_guild) => {
                                 clear_guild_queue(guild_channel.guild_id.to_string()).await;
                             },
                             None => {
@@ -645,7 +645,7 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             queue.push(track_handle.metadata().source_url.clone().unwrap())
         }
 
-        update_guild_queue(guild, queue).await;
+        set_guild_queue(guild_id.to_string(), queue).await;
 
     } else {
         check_msg(
