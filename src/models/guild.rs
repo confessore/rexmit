@@ -66,4 +66,8 @@ impl Guild {
             }
         }
     }
+
+    pub fn is_subscribed(&self) -> bool {
+        return self.expiration > Utc::now();
+    }
 } 

@@ -420,18 +420,15 @@ pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
 /// some bool or none
 /// 
 pub async fn get_guild_is_subscribed(guild_id: String) -> Option<bool> {
-    let expiration_option = get_guild_expiration(guild_id).await;
-    match expiration_option {
-        Some(expiration) => {
-            println!("expiration option is some");
-            if expiration > Utc::now() {
-                return Some(true);
-            }
-            return Some(false);
+    let guild_option = get_guild_document(guild_id).await;
+    match guild_option {
+        Some(guild) => {
+            println!("guild option is some");
+            return Some(guild.is_subscribed());
         },
         None =>
         {
-            println!("expiration option is none");
+            println!("guild option is none");
             return None;
         }
     }
