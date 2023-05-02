@@ -17,10 +17,8 @@ use std::{
     time::Duration,
 };
 
-use mongodb::{
-    bson::{doc, }
-};
-use rexmit::{models::{guild::Guild}, database::{get_guild_collection, update_guild_queue, clear_guild_queue, set_joined_to_channel, pop_guild_queue, get_guilds_joined_to_channel, get_guild_queue}};
+
+use rexmit::{database::{update_guild_queue, clear_guild_queue, set_joined_to_channel, pop_guild_queue, get_guilds_joined_to_channel, get_guild_queue}};
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler, Cache},
@@ -33,7 +31,7 @@ use serenity::{
         StandardFramework,
     },
     http::Http,
-    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity, PartialGuild, GuildId}},
+    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity}},
     prelude::{GatewayIntents, Mentionable},
     Result as SerenityResult,
 };
@@ -242,7 +240,6 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
             handle.add_global_event(
                 Event::Periodic(Duration::from_secs(1800), None),
                 Periodic {
-                    guild: og_guild,
                     voice_chan_id: connect_to,
                     chan_id,
                     http: send_http,
@@ -515,7 +512,6 @@ impl VoiceEventHandler for SongEndNotifier {
 }
 
 struct Periodic {
-    guild: serenity::model::prelude::Guild,
     voice_chan_id: ChannelId,
     chan_id: ChannelId,
     http: Arc<Http>,
