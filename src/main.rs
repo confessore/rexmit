@@ -271,7 +271,7 @@ struct TrackEndNotifier {
 impl VoiceEventHandler for TrackEndNotifier {
     async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
         if let EventContext::Track(track_list) = ctx {
-            pop_guild_queue(self.guild.clone()).await;
+            pop_guild_queue(self.guild.id.to_string()).await;
             check_msg(
                 self.chan_id
                     .say(&self.http, &format!("Track ended: {}", track_list.first().as_ref().unwrap().1.metadata().source_url.as_ref().unwrap()))

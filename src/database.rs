@@ -254,30 +254,47 @@ pub async fn clear_guild_queue(guild: serenity::model::prelude::Guild) {
     }
 }
 
-pub async fn pop_guild_queue(guild: serenity::model::prelude::Guild) {
-    let collection_option = get_guild_collection().await;
-    if collection_option.is_some() {
-        let collection = collection_option.unwrap();
-        
-        let result = collection.find_one_and_update(doc! { "id": &guild.id.to_string() }, doc! { "$pop": { "queue": -1 }}, None).await;
-
-        println!("{:?}", result);
-        match &result {
-            Ok(option) => {
-                match &option {
-                    Some(guild) => {
-                        println!("{:?}", guild);
-                    }, 
-                    None => {
-                        let guild = Guild::new_from_serenity_guild(Some(guild));
-                        let result = collection.insert_one(&guild, None).await;
-                        println!("{:?}", result)
+/// directly pops the 0 index of a guild's queue in mongo given a guild id and returns the guild document
+///
+/// ### arguments
+/// 
+/// * `guild_id` - the discord issued id for the guild
+/// 
+/// ### returns 
+/// 
+/// some guild or none
+/// 
+pub async fn pop_guild_queue(guild_id: String) -> Option<Guild> {
+    let guild_collection_option = get_guild_collection().await;
+    match &guild_collection_option {
+        Some(guild_collection) => {
+            println!("guild collection option is some");
+            let guild_option_result = guild_collection.find_one_and_update(doc! { "id": &guild_id }, doc! { "$pop": { "queue": -1 }}, None).await;
+            match guild_option_result {
+                Ok(guild_option) => {
+                    println!("guild option result is ok");
+                    match guild_option {
+                        Some(guild) => {
+                            println!("guild option is some");
+                            return Some(guild);
+                        }, 
+                        None => {
+                            println!("guild option is none");
+                            let guild_option = insert_new_guild(&guild_collection_option, guild_id).await;
+                            return guild_option;
+                        }
                     }
+                },
+                Err(why) => {
+                    println!("guild option result is err");
+                    println!("{}", why);
+                    return None;
                 }
-            },
-            Err(why) => {
-                println!("{}", why)
             }
+        },
+        None => {
+            println!("guild collection option is none");
+            return None;
         }
     }
 }
