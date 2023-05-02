@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use serenity::model::prelude::PartialGuild;
 
@@ -11,9 +12,7 @@ pub struct Guild {
     #[serde(default)]
     pub name: String,
     #[serde(default)]
-    pub subscribed: bool,
-    #[serde(default)]
-    pub expiration: i64,
+    pub expiration: DateTime<Utc>,
     #[serde(default)]
     pub joined_to_channel: bool,
     #[serde(default)]

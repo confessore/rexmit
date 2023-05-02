@@ -1,10 +1,12 @@
 use std::env;
 
+use chrono::{Utc};
 use mongodb::{
     Client as MongoClient,
     Collection, Database, bson::doc
 };
 use serenity::prelude::Context;
+use tracing_subscriber::fmt::time::ChronoUtc;
 
 use crate::{models::guild::Guild, context::context_get_guild};
 
@@ -401,6 +403,33 @@ pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
     }
 }
 
+
+/// gets a guild's subscription status from mongo given a guild id
+///
+/// ### arguments
+/// 
+/// * `guild_id` - the discord issued id for the guild
+/// 
+/// ### returns 
+/// 
+/// some bool or none
+/// 
+pub async fn get_guild_is_subscribed(guild_id: String) -> Option<bool> {
+    let guild_option = get_guild_document(guild_id).await;
+    match guild_option {
+        Some(guild) => {
+            if guild.expiration > Utc::now() {
+                return Some(true);
+            }
+            return Some(false);
+        },
+        None =>
+        {
+            return None;
+        }
+    }
+}
+
 /// sets a guild queue in mongo given a guild id and a queue
 ///
 /// ### arguments
@@ -455,3 +484,4 @@ pub async fn set_guild_queue(guild_id: String, queue: Vec<String>) -> Option<Vec
         }
     }*/
 }
+

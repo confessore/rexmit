@@ -16,6 +16,7 @@ reqwest = { version = "0.11", features = ["json"] }
 bcrypt = "0.10"
 dotenv = "0.15.0"
 mongodb = "2.1.0"
+chrono = "0.4.24"
 
 [dependencies.songbird]
 git = "https://github.com/serenity-rs/songbird"
