@@ -12,6 +12,10 @@ use crate::{models::guild::Guild, context::context_get_guild};
 
 /// gets the rexmit database from mongo
 /// 
+/// ### arguments
+/// 
+/// * `none` - none
+/// 
 /// ### returns 
 /// 
 /// some database
@@ -44,6 +48,10 @@ pub async fn get_rexmit_database() -> Option<Database> {
 }
 
 /// gets the rexmit guild collection from mongo
+/// 
+/// ### arguments
+/// 
+/// * `none` - none
 /// 
 /// ### returns 
 /// 
