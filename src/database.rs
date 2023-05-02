@@ -1,12 +1,11 @@
 use std::env;
 
-use chrono::{Utc};
+use chrono::{DateTime, Utc};
 use mongodb::{
     Client as MongoClient,
     Collection, Database, bson::doc
 };
 use serenity::prelude::Context;
-use tracing_subscriber::fmt::time::ChronoUtc;
 
 use crate::{models::guild::Guild, context::context_get_guild};
 
@@ -309,8 +308,6 @@ pub async fn set_joined_to_channel(ctx: &Context, guild_id: u64, joined: bool) -
 }
 
 
-// wip
-// some repeating here, consider modularizing by creating additional functions
 pub async fn get_guilds_joined_to_channel() -> Option<Vec<String>> {
     let guild_collection_option = get_guild_collection().await;
     match guild_collection_option {
@@ -415,16 +412,43 @@ pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
 /// some bool or none
 /// 
 pub async fn get_guild_is_subscribed(guild_id: String) -> Option<bool> {
-    let guild_option = get_guild_document(guild_id).await;
-    match guild_option {
-        Some(guild) => {
-            if guild.expiration > Utc::now() {
+    let expiration_option = get_guild_expiration(guild_id).await;
+    match expiration_option {
+        Some(expiration) => {
+            println!("expiration option is some");
+            if expiration > Utc::now() {
                 return Some(true);
             }
             return Some(false);
         },
         None =>
         {
+            println!("expiration option is none");
+            return None;
+        }
+    }
+}
+
+/// gets a guild's expiration from mongo given a guild id
+///
+/// ### arguments
+/// 
+/// * `guild_id` - the discord issued id for the guild
+/// 
+/// ### returns 
+/// 
+/// some datetime utc or none
+/// 
+pub async fn get_guild_expiration(guild_id: String) -> Option<DateTime<Utc>> {
+    let guild_option = get_guild_document(guild_id).await;
+    match guild_option {
+        Some(guild) => {
+            println!("guild option is some");
+            return Some(guild.expiration);
+        },
+        None =>
+        {
+            println!("guild option is none");
             return None;
         }
     }
@@ -445,43 +469,16 @@ pub async fn set_guild_queue(guild_id: String, queue: Vec<String>) -> Option<Vec
     let guild_option = get_guild_document(guild_id).await;
     match guild_option {
         Some(mut guild) => {
+            println!("guild option is some");
             guild.queue = queue;
             set_guild_document(&guild).await;
             return Some(guild.queue)
         },
         None =>
         {
+            println!("guild option is none");
             return None;
         }
     }
-    /*let guild_collection_option = get_guild_collection().await;
-    match guild_collection_option {
-        Some(guild_collection) => {
-            let filter = doc! { "id": &guild_id };
-            let update = doc! { "$set": { "queue": &queue }};
-            let guild_option_result = guild_collection.find_one_and_update(filter, update, None).await;
-            match guild_option_result {
-                Ok(guild_option) => {
-                    match guild_option {
-                        Some(guild) => {
-                            println!("{:?}", guild);
-                            return Some(guild.queue)
-                        }, 
-                        None => {
-                            insert_new_guild(guild_id).await;
-                            return None;
-                        }
-                    }
-                },
-                Err(why) => {
-                    println!("{}", why);
-                    return None;
-                }
-            }
-        },
-        None => {
-            return None;
-        }
-    }*/
 }
 
