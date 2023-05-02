@@ -328,6 +328,7 @@ pub async fn set_joined_to_channel(guild_id: String, channel_id_option: Option<S
             let guild_option_result = guild_collection.find_one_and_update(filter, update, None).await;
             match guild_option_result {
                 Ok(guild_option) => {
+                    println!("guild option result is ok");
                     match guild_option {
                         Some(guild) => {
                             println!("guild option is some");
