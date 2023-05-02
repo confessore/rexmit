@@ -8,30 +8,59 @@ use serenity::prelude::Context;
 
 use crate::{models::guild::Guild, context::context_get_guild};
 
+
+/// gets the rexmit database from mongo
+/// 
+/// ### returns 
+/// 
+/// some database
+/// 
 pub async fn get_rexmit_database() -> Option<Database> {
-    let database_url: Result<String, env::VarError> = std::env::var("DATABASE_URL");
-    if database_url.is_ok() {
-        let client_result = MongoClient::with_uri_str(database_url.unwrap()).await;
-        if client_result.is_ok() {
-            let client = client_result.unwrap();
-            let database = client.database("rexmit");
-            return Some(database);
+    let database_url_result: Result<String, env::VarError> = std::env::var("DATABASE_URL");
+    match database_url_result {
+        Ok(database_url) => {
+            println!("database url result is ok");
+            let client_result = MongoClient::with_uri_str(database_url).await;
+            match client_result {
+                Ok(client) => {
+                    println!("client result is ok");
+                    let database = client.database("rexmit");
+                    return Some(database);
+                },
+                Err(why) => {
+                    println!("client result is err");
+                    println!("{}", why);
+                    return None;
+                }
+            }
+        },
+        Err(why) => {
+            println!("database url result is err");
+            println!("{}", why);
+            return None;
         }
     }
-    println!("no rexmit database found");
-    return None;
 }
 
+/// gets the rexmit guild collection from mongo
+/// 
+/// ### returns 
+/// 
+/// some collection of guild
+/// 
 pub async fn get_guild_collection() -> Option<Collection<Guild>> {
-
     let database_option = get_rexmit_database().await;
-    if database_option.is_some() {
-        let database = database_option.unwrap();
-        let collection: Collection<Guild> = database.collection("guilds");
-        return Some(collection);
+    match database_option {
+        Some(database) => {
+            println!("database option is some");
+            let collection: Collection<Guild> = database.collection("guilds");
+            return Some(collection);
+        },
+        None => {
+            println!("database option is none");
+            return None;
+        }
     }
-    println!("no guild collection found");
-    return None;
 }
 
 /// gets a guild document from mongo given a discord guild id
