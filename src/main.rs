@@ -1,24 +1,9 @@
-//! Example demonstrating how to make use of individual track audio events,
-//! and how to use the `TrackQueue` system.
-//!
-//! Requires the "cache", "standard_framework", and "voice" features be enabled in your
-//! Cargo.toml, like so:
-//!
-//! ```toml
-//! [dependencies.serenity]
-//! git = "https://github.com/serenity-rs/serenity.git"
-//! features = ["cache", "framework", "standard_framework", "voice"]
-//! ```
 use std::{
     env,
-    sync::{
-        Arc,
-    },
+    sync::Arc,
     time::Duration,
 };
-
-
-use rexmit::{database::{set_guild_queue, clear_guild_queue, set_joined_to_channel, pop_guild_queue, get_guilds_joined_to_channel, get_guild_queue}};
+use rexmit::database::{set_guild_queue, clear_guild_queue, set_joined_to_channel, pop_guild_queue, get_guilds_joined_to_channel, get_guild_queue};
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler, Cache},
@@ -35,7 +20,6 @@ use serenity::{
     prelude::{GatewayIntents, Mentionable},
     Result as SerenityResult,
 };
-
 use songbird::{
     input::{
         self,
@@ -47,6 +31,7 @@ use songbird::{
     SerenityInit,
     TrackEvent,
 };
+use tracing::Level;
 
 struct Handler;
 
@@ -100,9 +85,13 @@ struct General;
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
-
     let debug = env::var("DEBUG").expect("Expected a DEBUG == to 1 or 0 in the environment");
+    let mut log_level = Level::INFO;
+    if debug == "1" {
+        log_level = Level::DEBUG;
+    }
+    tracing_subscriber::fmt().with_max_level(log_level).init();
+
     // Configure the client with your Discord bot token in the environment.
     let token = env::var("DISCORD_TOKEN").expect("Expected a DISCORD_TOKEN in the environment");
 
