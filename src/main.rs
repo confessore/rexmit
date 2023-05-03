@@ -237,7 +237,7 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                 },
             );
 
-            set_joined_to_channel(guild_id.to_string(), Some(connect_to.to_string())).await;
+            set_joined_to_channel(guild_id.to_string(), Some(connect_to.to_string()), Some(chan_id.to_string())).await;
 
         } else {
             check_msg(
@@ -302,7 +302,7 @@ async fn leave(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
             check_msg(msg.channel_id.say(&ctx.http, "Left voice channel").await);
             clear_guild_queue(guild_id.to_string()).await;
-            set_joined_to_channel(guild_id.to_string(), None).await;
+            set_joined_to_channel(guild_id.to_string(), None, None).await;
         } else {
             check_msg(msg.reply(ctx, "Not in a voice channel").await);
         }
@@ -544,7 +544,7 @@ impl VoiceEventHandler for Periodic {
 
                             }
                         };
-                        set_joined_to_channel(guild_channel.guild_id.to_string(), None).await;
+                        set_joined_to_channel(guild_channel.guild_id.to_string(), None, None).await;
                     } else {
                         check_msg(self.message_channel_id.say(&self.http, "Not in a voice channel").await);
                     }

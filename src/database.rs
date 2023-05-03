@@ -351,20 +351,28 @@ pub async fn pop_guild_queue(guild_id: String) -> Option<Guild> {
 /// 
 /// some guild or none
 /// 
-pub async fn set_joined_to_channel(guild_id: String, channel_id_option: Option<String>) -> Option<Guild> {
+pub async fn set_joined_to_channel(guild_id: String, voice_channel_id_option: Option<String>, message_channel_id_option: Option<String>) -> Option<Guild> {
     let guild_collection_option = get_guild_collection().await;
     match &guild_collection_option {
         Some(guild_collection) => {
             debug!("guild collection option is some");
             let filter = doc! { "id": &guild_id };
-            let mut update = doc! { "$set": { "joined_to_channel": false, "joined_channel_id": "" }};
-            match channel_id_option {
-                Some(channel_id) => {
-                    debug!("channel id option is some");
-                    update = doc! { "$set": { "joined_to_channel": true, "joined_channel_id": channel_id }};
+            let mut update = doc! { "$set": { "joined_to_voice": false, "voice_channel_id": "", "message_channel_id": "" }};
+            match voice_channel_id_option {
+                Some(voice_channel_id) => {
+                    debug!("voice channel id option is some");
+                    match message_channel_id_option {
+                        Some(message_channel_id) => {
+                            debug!("message channel id option is some");
+                            update = doc! { "$set": { "joined_to_voice": true, "voice_channel_id": voice_channel_id, "message_channel_id": message_channel_id }};
+                        },
+                        None => {
+                            debug!("message channel id option is none");
+                        }
+                    }
                 },
                 None => {
-                    debug!("channel id option is none");
+                    debug!("voice channel id option is none");
                 }
             }
             let guild_option_result = guild_collection.find_one_and_update(filter, update, None).await;
@@ -412,7 +420,7 @@ pub async fn get_guilds_joined_to_channel() -> Option<Vec<String>> {
     match guild_collection_option {
         Some(guild_collection) => {
             debug!("{}", "guild collection is some");
-            let filter = doc! { "joined_to_channel": true };
+            let filter = doc! { "joined_to_voice": true };
             let cursor_result = guild_collection.find(filter, None).await;
             match cursor_result {
                 Ok(mut cursor) => {

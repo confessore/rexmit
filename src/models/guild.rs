@@ -14,9 +14,11 @@ pub struct Guild {
     #[serde(default)]
     pub expiration: DateTime<Utc>,
     #[serde(default)]
-    pub joined_to_channel: bool,
+    pub joined_to_voice: bool,
     #[serde(default)]
-    pub joined_channel_id: String,
+    pub voice_channel_id: String,
+    #[serde(default)]
+    pub message_channel_id: String,
     #[serde(default)]
     pub queue: Vec<String>
 }
