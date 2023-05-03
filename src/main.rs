@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use rexmit::database::{set_guild_queue, clear_guild_queue, set_joined_to_channel, pop_guild_queue, get_guilds_joined_to_channel, get_guild_queue};
+use rexmit::database::{set_guild_queue, clear_guild_queue, set_joined_to_channel, pop_guild_queue};
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler, Cache},
@@ -41,19 +41,19 @@ impl EventHandler for Handler {
         ctx.set_activity(Activity::listening("~q <youtube url>")).await;
         println!("{} is connected!", ready.user.name);
         //checking guild queues, could use better naming
-        let joined_guilds_option = get_guilds_joined_to_channel().await;
+        /*let joined_guilds_option = get_guilds_joined_to_channel().await;
         if joined_guilds_option.is_some() {
             let joined_guilds = joined_guilds_option.unwrap();
             for joined_guild in joined_guilds {
-                let guild_queue_option = get_guild_queue(joined_guild).await;
-                if guild_queue_option.is_some() {
-                    let guild_queue = guild_queue_option.unwrap();
-                    for url in guild_queue {
-                        println!("{}", url);
-                    }
+                let subscribed_option = get_guild_is_subscribed(joined_guild.to_string()).await;
+                match subscribed_option {
+                    Some(subscribed) => {
+                        info!("guild is subscribed: {:?}", subscribed);
+                    },
+                    None => {}
                 }
             }
-        }
+        }*/
     }
 
     /*async fn voice_state_update(&self, _ctx: Context, _old: Option<VoiceState>, _new: VoiceState) {
