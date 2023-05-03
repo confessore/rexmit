@@ -1,26 +1,9 @@
-//! Example demonstrating how to make use of individual track audio events,
-//! and how to use the `TrackQueue` system.
-//!
-//! Requires the "cache", "standard_framework", and "voice" features be enabled in your
-//! Cargo.toml, like so:
-//!
-//! ```toml
-//! [dependencies.serenity]
-//! git = "https://github.com/serenity-rs/serenity.git"
-//! features = ["cache", "framework", "standard_framework", "voice"]
-//! ```
 use std::{
     env,
-    sync::{
-        Arc,
-    },
+    sync::Arc,
     time::Duration,
 };
-
-use mongodb::{
-    bson::{doc, }
-};
-use rexmit::{models::{guild::Guild}, database::{get_guild_collection, update_guild_queue, clear_guild_queue, set_joined, pop_guild_queue}};
+use rexmit::database::{set_guild_queue, clear_guild_queue, set_joined_to_channel, pop_guild_queue};
 use serenity::{
     async_trait,
     client::{Client, Context, EventHandler, Cache},
@@ -33,11 +16,10 @@ use serenity::{
         StandardFramework,
     },
     http::Http,
-    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity, PartialGuild, GuildId}},
+    model::{channel::Message, gateway::Ready, prelude::{ChannelId, Activity}},
     prelude::{GatewayIntents, Mentionable},
     Result as SerenityResult,
 };
-
 use songbird::{
     input::{
         self,
@@ -49,6 +31,7 @@ use songbird::{
     SerenityInit,
     TrackEvent,
 };
+use tracing::Level;
 
 struct Handler;
 
@@ -57,6 +40,20 @@ impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         ctx.set_activity(Activity::listening("~q <youtube url>")).await;
         println!("{} is connected!", ready.user.name);
+        //checking guild queues, could use better naming
+        /*let joined_guilds_option = get_guilds_joined_to_channel().await;
+        if joined_guilds_option.is_some() {
+            let joined_guilds = joined_guilds_option.unwrap();
+            for joined_guild in joined_guilds {
+                let subscribed_option = get_guild_is_subscribed(joined_guild.to_string()).await;
+                match subscribed_option {
+                    Some(subscribed) => {
+                        info!("guild is subscribed: {:?}", subscribed);
+                    },
+                    None => {}
+                }
+            }
+        }*/
     }
 
     /*async fn voice_state_update(&self, _ctx: Context, _old: Option<VoiceState>, _new: VoiceState) {
@@ -88,9 +85,13 @@ struct General;
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
-
     let debug = env::var("DEBUG").expect("Expected a DEBUG == to 1 or 0 in the environment");
+    let mut log_level = Level::INFO;
+    if debug == "1" {
+        log_level = Level::DEBUG;
+    }
+    tracing_subscriber::fmt().with_max_level(log_level).init();
+
     // Configure the client with your Discord bot token in the environment.
     let token = env::var("DISCORD_TOKEN").expect("Expected a DISCORD_TOKEN in the environment");
 
@@ -173,7 +174,8 @@ async fn j(ctx: &Context, msg: &Message) -> CommandResult {
 #[only_in(guilds)]
 async fn join(ctx: &Context, msg: &Message) -> CommandResult {
     if msg.guild_id.is_some() {
-        let guild = msg.guild(&ctx.cache).unwrap();
+        let og_guild = msg.guild(&ctx.cache).unwrap();
+        let guild = og_guild.clone();
         let guild_id = guild.id;
 
         let channel_id = guild
@@ -227,15 +229,15 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
             handle.add_global_event(
                 Event::Periodic(Duration::from_secs(1800), None),
                 Periodic {
-                    voice_chan_id: connect_to,
-                    chan_id,
+                    voice_channel_id: connect_to,
+                    message_channel_id: chan_id,
                     http: send_http,
                     cache: send_cache,
                     ctx: ctx.clone()
                 },
             );
 
-            set_joined(ctx, guild_id.into(), true).await;
+            set_joined_to_channel(guild_id.to_string(), Some(connect_to.to_string()), Some(chan_id.to_string())).await;
 
         } else {
             check_msg(
@@ -258,7 +260,7 @@ struct TrackEndNotifier {
 impl VoiceEventHandler for TrackEndNotifier {
     async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
         if let EventContext::Track(track_list) = ctx {
-            pop_guild_queue(self.guild.clone()).await;
+            pop_guild_queue(self.guild.id.to_string()).await;
             check_msg(
                 self.chan_id
                     .say(&self.http, &format!("Track ended: {}", track_list.first().as_ref().unwrap().1.metadata().source_url.as_ref().unwrap()))
@@ -299,9 +301,8 @@ async fn leave(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             }
 
             check_msg(msg.channel_id.say(&ctx.http, "Left voice channel").await);
-
-            clear_guild_queue(guild).await;
-            set_joined(ctx, guild_id.into(), false).await;
+            clear_guild_queue(guild_id.to_string()).await;
+            set_joined_to_channel(guild_id.to_string(), None, None).await;
         } else {
             check_msg(msg.reply(ctx, "Not in a voice channel").await);
         }
@@ -499,8 +500,8 @@ impl VoiceEventHandler for SongEndNotifier {
 }
 
 struct Periodic {
-    voice_chan_id: ChannelId,
-    chan_id: ChannelId,
+    voice_channel_id: ChannelId,
+    message_channel_id: ChannelId,
     http: Arc<Http>,
     cache: Arc<Cache>,
     ctx: Context,
@@ -509,7 +510,7 @@ struct Periodic {
 #[async_trait]
 impl VoiceEventHandler for Periodic {
     async fn act(&self, _ctx: &EventContext<'_>) -> Option<Event> {
-        let channel = self.http.get_channel(self.voice_chan_id.into()).await;
+        let channel = self.http.get_channel(self.voice_channel_id.into()).await;
         match channel.unwrap().guild() {
             Some(guild_channel) => {
                 let members = guild_channel.members(&self.cache).await;
@@ -528,20 +529,29 @@ impl VoiceEventHandler for Periodic {
                     if has_handler {
                         if let Err(e) = manager.remove(guild_channel.guild_id).await {
                             check_msg(
-                                self.chan_id
+                                self.message_channel_id
                                     .say(&self.http, format!("Failed: {:?}", e))
                                     .await,
                             );
                         }
 
-                        check_msg(self.chan_id.say(&self.http, "Left voice channel").await);
+                        check_msg(self.message_channel_id.say(&self.http, "Left voice channel").await);
+                        match guild_channel.guild(&self.cache) {
+                            Some(_guild) => {
+                                clear_guild_queue(guild_channel.guild_id.to_string()).await;
+                            },
+                            None => {
+
+                            }
+                        };
+                        set_joined_to_channel(guild_channel.guild_id.to_string(), None, None).await;
                     } else {
-                        check_msg(self.chan_id.say(&self.http, "Not in a voice channel").await);
+                        check_msg(self.message_channel_id.say(&self.http, "Not in a voice channel").await);
                     }
                 }
             },
             None => {
-                println!("{}", "channel was none")
+                println!("{}", "channel is none")
             }
         }
 
@@ -624,7 +634,7 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             queue.push(track_handle.metadata().source_url.clone().unwrap())
         }
 
-        update_guild_queue(guild, queue).await;
+        set_guild_queue(guild_id.to_string(), queue).await;
 
     } else {
         check_msg(
@@ -738,7 +748,7 @@ async fn stop(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
             queue.push(track_handle.metadata().source_url.clone().unwrap())
         }
         
-        clear_guild_queue(guild).await;
+        clear_guild_queue(guild_id.to_string()).await;
         
     } else {
         check_msg(
