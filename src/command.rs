@@ -1,3 +1,1 @@
-pub async fn rejoin_channels() {
-    
-}
+pub async fn rejoin_channels() {}

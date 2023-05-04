@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serenity::model::prelude::PartialGuild;
-
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(default)]
@@ -20,14 +19,14 @@ pub struct Guild {
     #[serde(default)]
     pub message_channel_id: String,
     #[serde(default)]
-    pub queue: Vec<String>
+    pub queue: Vec<String>,
 }
 
 impl Guild {
     pub fn new(guild_id: String) -> Guild {
         Guild {
             id: guild_id,
-            ..Default::default() 
+            ..Default::default()
         }
     }
 
@@ -39,14 +38,12 @@ impl Guild {
                 Guild {
                     id: id.to_string(),
                     name: name.to_string(),
-                    ..Default::default() 
-                }
-            },
-            None => { 
-                Guild { 
                     ..Default::default()
                 }
             }
+            None => Guild {
+                ..Default::default()
+            },
         }
     }
 
@@ -58,18 +55,16 @@ impl Guild {
                 Guild {
                     id: id.to_string(),
                     name: name.to_string(),
-                    ..Default::default() 
-                }
-            },
-            None => { 
-                Guild { 
                     ..Default::default()
                 }
             }
+            None => Guild {
+                ..Default::default()
+            },
         }
     }
 
     pub fn is_subscribed(&self) -> bool {
         return self.expiration > Utc::now();
     }
-} 
+}
