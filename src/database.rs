@@ -538,7 +538,8 @@ pub async fn count_subscribed_guilds_joined_to_channel() -> Option<u64> {
     match guild_collection_option {
         Some(guild_collection) => {
             debug!("{}", "guild collection is some");
-            let filter = doc! { "expiration": { "$gt": Utc::now().to_string() }, "joined_to_voice": true };
+            let filter =
+                doc! { "expiration": { "$gt": Utc::now().to_string() }, "joined_to_voice": true };
             let count_result = guild_collection.count_documents(filter, None).await;
             match count_result {
                 Ok(count) => {
@@ -574,7 +575,8 @@ pub async fn count_free_guilds_joined_to_channel() -> Option<u64> {
     match guild_collection_option {
         Some(guild_collection) => {
             debug!("{}", "guild collection is some");
-            let filter = doc! { "expiration": { "$lt": Utc::now().to_string() }, "joined_to_voice": true };
+            let filter =
+                doc! { "expiration": { "$lt": Utc::now().to_string() }, "joined_to_voice": true };
             let count_result = guild_collection.count_documents(filter, None).await;
             match count_result {
                 Ok(count) => {
