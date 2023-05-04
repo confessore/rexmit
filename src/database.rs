@@ -487,6 +487,114 @@ pub async fn get_guilds_joined_to_channel() -> Option<Vec<String>> {
     }
 }
 
+/// counts guilds that are found to be joined to channel in mongo
+///
+/// ### arguments
+///
+/// * `none` - none
+///
+/// ### returns
+///
+/// some vector of string or none
+///
+pub async fn count_guilds_joined_to_channel() -> Option<u64> {
+    let guild_collection_option = get_guild_collection().await;
+    match guild_collection_option {
+        Some(guild_collection) => {
+            debug!("{}", "guild collection is some");
+            let filter = doc! { "joined_to_voice": true };
+            let count_result = guild_collection.count_documents(filter, None).await;
+            match count_result {
+                Ok(count) => {
+                    debug!("{}", "count result is ok");
+                    return Some(count);
+                }
+                Err(why) => {
+                    debug!("{}", "count result is err");
+                    error!("{}", why);
+                    return None;
+                }
+            }
+        }
+        None => {
+            debug!("{}", "guild collection is none");
+            return None;
+        }
+    }
+}
+
+/// counts subscribed guilds that are found to be joined to channel in mongo
+///
+/// ### arguments
+///
+/// * `none` - none
+///
+/// ### returns
+///
+/// some vector of string or none
+///
+pub async fn count_subscribed_guilds_joined_to_channel() -> Option<u64> {
+    let guild_collection_option = get_guild_collection().await;
+    match guild_collection_option {
+        Some(guild_collection) => {
+            debug!("{}", "guild collection is some");
+            let filter = doc! { "expiration": { "$gt": Utc::now().to_string() }, "joined_to_voice": true };
+            let count_result = guild_collection.count_documents(filter, None).await;
+            match count_result {
+                Ok(count) => {
+                    debug!("{}", "count result is ok");
+                    return Some(count);
+                }
+                Err(why) => {
+                    debug!("{}", "count result is err");
+                    error!("{}", why);
+                    return None;
+                }
+            }
+        }
+        None => {
+            debug!("{}", "guild collection is none");
+            return None;
+        }
+    }
+}
+
+/// counts free guilds that are found to be joined to channel in mongo
+///
+/// ### arguments
+///
+/// * `none` - none
+///
+/// ### returns
+///
+/// some vector of string or none
+///
+pub async fn count_free_guilds_joined_to_channel() -> Option<u64> {
+    let guild_collection_option = get_guild_collection().await;
+    match guild_collection_option {
+        Some(guild_collection) => {
+            debug!("{}", "guild collection is some");
+            let filter = doc! { "expiration": { "$lt": Utc::now().to_string() }, "joined_to_voice": true };
+            let count_result = guild_collection.count_documents(filter, None).await;
+            match count_result {
+                Ok(count) => {
+                    debug!("{}", "count result is ok");
+                    return Some(count);
+                }
+                Err(why) => {
+                    debug!("{}", "count result is err");
+                    error!("{}", why);
+                    return None;
+                }
+            }
+        }
+        None => {
+            debug!("{}", "guild collection is none");
+            return None;
+        }
+    }
+}
+
 /// gets a guild queue in mongo given a guild id
 ///
 /// ### arguments

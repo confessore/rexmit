@@ -1,7 +1,7 @@
-use rexmit::database::{
+use rexmit::{database::{
     clear_guild_queue, get_guild_is_subscribed, pop_guild_queue, set_guild_queue,
-    set_joined_to_channel,
-};
+    set_joined_to_channel, count_subscribed_guilds_joined_to_channel, count_guilds_joined_to_channel, count_free_guilds_joined_to_channel,
+}, command::{check_msg, unmute, UNMUTE_COMMAND}};
 use serenity::{
     async_trait,
     client::{Cache, Client, Context, EventHandler},
@@ -26,7 +26,7 @@ use songbird::{
     Event, EventContext, EventHandler as VoiceEventHandler, SerenityInit, TrackEvent,
 };
 use std::{env, sync::Arc, time::Duration};
-use tracing::Level;
+use tracing::{Level, info};
 
 struct Handler;
 
@@ -36,6 +36,22 @@ impl EventHandler for Handler {
         ctx.set_activity(Activity::listening("~q <youtube url>"))
             .await;
         println!("{} is connected!", ready.user.name);
+
+        let free_guilds_option = count_free_guilds_joined_to_channel().await;
+        if free_guilds_option.is_some() {
+            info!("free guilds{}", free_guilds_option.unwrap())
+        }
+        
+        let sub_guilds_option = count_subscribed_guilds_joined_to_channel().await;
+        if sub_guilds_option.is_some() {
+            info!("sub guilds: {}", sub_guilds_option.unwrap())
+        }
+
+        let guilds_option = count_guilds_joined_to_channel().await;
+        if guilds_option.is_some() {
+            info!("total guilds: {}", guilds_option.unwrap())
+        }
+        
         //checking guild queues, could use better naming
         /*let joined_guilds_option = get_guilds_joined_to_channel().await;
         if joined_guilds_option.is_some() {
@@ -830,43 +846,4 @@ async fn undeafen(ctx: &Context, msg: &Message) -> CommandResult {
 #[only_in(guilds)]
 async fn um(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     return unmute(ctx, msg, _args).await;
-}
-
-#[command]
-#[only_in(guilds)]
-async fn unmute(ctx: &Context, msg: &Message) -> CommandResult {
-    let guild = msg.guild(&ctx.cache).unwrap();
-    let guild_id = guild.id;
-    let manager = songbird::get(ctx)
-        .await
-        .expect("Songbird Voice client placed in at initialisation.")
-        .clone();
-
-    if let Some(handler_lock) = manager.get(guild_id) {
-        let mut handler = handler_lock.lock().await;
-        if let Err(e) = handler.mute(false).await {
-            check_msg(
-                msg.channel_id
-                    .say(&ctx.http, format!("Failed: {:?}", e))
-                    .await,
-            );
-        }
-
-        check_msg(msg.channel_id.say(&ctx.http, "Unmuted").await);
-    } else {
-        check_msg(
-            msg.channel_id
-                .say(&ctx.http, "Not in a voice channel to unmute in")
-                .await,
-        );
-    }
-
-    Ok(())
-}
-
-/// Checks that a message successfully sent; if not, then logs why to stdout.
-fn check_msg(result: SerenityResult<Message>) {
-    if let Err(why) = result {
-        println!("Error sending message: {:?}", why);
-    }
 }
