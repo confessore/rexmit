@@ -79,49 +79,68 @@ async fn j(ctx: &Context, msg: &Message) -> CommandResult {
     return join(ctx, msg, _args).await;
 }
 
+/// joins the command issuer's voice channel
+/// without a database url, the join simply occurs
+/// with a database url, a subscription check is performed
+///
+/// ### arguments
+///
+/// * `ctx` - a reference to the context
+/// * `msg` - a reference to the message
+///
+/// ### returns
+///
+/// command result
+///
 #[command]
 #[only_in(guilds)]
 async fn join(ctx: &Context, msg: &Message) -> CommandResult {
-    if msg.guild_id.is_some() {
-        let og_guild = msg.guild(&ctx.cache).unwrap();
-        let guild = og_guild.clone();
-        let guild_id = guild.id;
-        let subscribed_option = get_guild_is_subscribed(guild_id.to_string()).await;
-        match subscribed_option {
-            Some(subscribed) => {
-                if subscribed {
-                    let voice_channel_id_option = guild
-                        .voice_states
-                        .get(&msg.author.id)
-                        .and_then(|voice_state| voice_state.channel_id);
+    match msg.guild_id {
+        Some(guild_id) => {
+            let guild = msg.guild(&ctx.cache).unwrap();
+            let guild_id = guild.id;
+            let subscribed_option = get_guild_is_subscribed(guild_id.to_string()).await;
+            match subscribed_option {
+                Some(subscribed) => {
+                    if subscribed {
+                        let voice_channel_id_option = guild
+                            .voice_states
+                            .get(&msg.author.id)
+                            .and_then(|voice_state| voice_state.channel_id);
 
-                    let voice_channel_id = match voice_channel_id_option {
-                        Some(voice_channel_id) => voice_channel_id,
-                        None => { return Ok(()) } 
-                    };
+                        let voice_channel_id = match voice_channel_id_option {
+                            Some(voice_channel_id) => voice_channel_id,
+                            None => { return Ok(()) } 
+                        };
 
-                    match context_join_channel(ctx, msg, voice_channel_id).await {
-                        Ok(()) => {
-                            set_joined_to_channel(
-                                guild_id.to_string(),
-                                Some(voice_channel_id.to_string()),
-                                Some(msg.channel_id.to_string()),
-                            )
-                            .await;
-                        },
-                        Err(why) => { return Ok(())}
+                        match context_join_channel(ctx, msg, voice_channel_id).await {
+                            Ok(()) => {
+                                set_joined_to_channel(
+                                    guild_id.to_string(),
+                                    Some(voice_channel_id.to_string()),
+                                    Some(msg.channel_id.to_string()),
+                                )
+                                .await;
+                            },
+                            Err(why) => { return Ok(()); }
+                        }
+                    } else {
+                        check_msg(
+                            msg.channel_id
+                                .say(&ctx.http, "oops! no subscription!")
+                                .await,
+                        );
                     }
-                } else {
-                    check_msg(
-                        msg.channel_id
-                            .say(&ctx.http, "oops! no subscription!")
-                            .await,
-                    );
+                },
+                None => {
+                    check_msg(msg.channel_id.say(&ctx.http, "oops! no subscription!").await);
+                    return Ok(());
                 }
-            },
-            None => {
-                check_msg(msg.channel_id.say(&ctx.http, "oops! no subscription!").await);
             }
+        },
+        None => {
+            check_msg(msg.channel_id.say(&ctx.http, "oops! guild_id not found").await);
+            return Ok(());
         }
     }
     Ok(())
