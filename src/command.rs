@@ -3,7 +3,7 @@ use std::time::Duration;
 use serenity::{
     framework::standard::{
         macros::{command, group},
-        Args, CommandResult,
+        Args, CommandResult, CommandError,
     },
     model::prelude::Message,
     prelude::{Context, Mentionable},
@@ -18,7 +18,7 @@ use crate::{
     database::{
         clear_guild_queue, get_guild_is_subscribed, set_guild_queue, set_joined_to_channel,
     },
-    handler::{Periodic, SongEndNotifier, SongFader, TrackEndNotifier},
+    handler::{Periodic, SongEndNotifier, SongFader, TrackEndNotifier}, context::context_join_channel,
 };
 
 #[group]
@@ -90,88 +90,37 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
         match subscribed_option {
             Some(subscribed) => {
                 if subscribed {
-                    let channel_id = guild
+                    let voice_channel_id_option = guild
                         .voice_states
                         .get(&msg.author.id)
                         .and_then(|voice_state| voice_state.channel_id);
 
-                    let connect_to = match channel_id {
-                        Some(channel) => channel,
-                        None => {
-                            check_msg(msg.reply(ctx, "Not in a voice channel").await);
-
-                            return Ok(());
-                        }
+                    let voice_channel_id = match voice_channel_id_option {
+                        Some(voice_channel_id) => voice_channel_id,
+                        None => { return Ok(()) } 
                     };
 
-                    let manager = songbird::get(ctx)
-                        .await
-                        .expect("Songbird Voice client placed in at initialisation.")
-                        .clone();
-
-                    let (handle_lock, success) = manager.join(guild_id, connect_to).await;
-
-                    if let Ok(_channel) = success {
-                        check_msg(
-                            msg.channel_id
-                                .say(&ctx.http, &format!("Joined {}", connect_to.mention()))
-                                .await,
-                        );
-
-                        let guild_id = msg.guild_id.unwrap();
-
-                        let chan_id = msg.channel_id;
-
-                        let send_http = ctx.http.clone();
-
-                        let mut handle = handle_lock.lock().await;
-
-                        handle.add_global_event(
-                            Event::Track(TrackEvent::End),
-                            TrackEndNotifier {
-                                guild_id,
-                                message_channel_id: chan_id,
-                                http: send_http,
-                            },
-                        );
-
-                        let send_http = ctx.http.clone();
-                        let send_cache = ctx.cache.clone();
-
-                        handle.add_global_event(
-                            Event::Periodic(Duration::from_secs(1800), None),
-                            Periodic {
-                                voice_channel_id: connect_to,
-                                message_channel_id: chan_id,
-                                http: send_http,
-                                cache: send_cache,
-                                ctx: ctx.clone(),
-                            },
-                        );
-
-                        set_joined_to_channel(
-                            guild_id.to_string(),
-                            Some(connect_to.to_string()),
-                            Some(chan_id.to_string()),
-                        )
-                        .await;
-                    } else {
-                        check_msg(
-                            msg.channel_id
-                                .say(&ctx.http, "Error joining the channel")
-                                .await,
-                        );
+                    match context_join_channel(ctx, msg, voice_channel_id).await {
+                        Ok(()) => {
+                            set_joined_to_channel(
+                                guild_id.to_string(),
+                                Some(voice_channel_id.to_string()),
+                                Some(msg.channel_id.to_string()),
+                            )
+                            .await;
+                        },
+                        Err(why) => { return Ok(())}
                     }
                 } else {
                     check_msg(
                         msg.channel_id
-                            .say(&ctx.http, "oops! no subscription active")
+                            .say(&ctx.http, "oops! no subscription!")
                             .await,
                     );
                 }
-            }
+            },
             None => {
-                check_msg(msg.channel_id.say(&ctx.http, "oops! no db!").await);
+                check_msg(msg.channel_id.say(&ctx.http, "oops! no subscription!").await);
             }
         }
     }

@@ -14,7 +14,7 @@ use serenity::{
         prelude::{Activity, ChannelId, GuildId},
     },
 };
-use songbird::{Event, EventContext, EventHandler as VoiceEventHandler};
+use songbird::{Event, EventContext, EventHandler as VoiceEventHandler, Songbird};
 use std::sync::Arc;
 use tracing::info;
 
@@ -163,7 +163,7 @@ pub struct Periodic {
     pub message_channel_id: ChannelId,
     pub http: Arc<Http>,
     pub cache: Arc<Cache>,
-    pub ctx: Context,
+    pub songbird_arc: Arc<Songbird>,
 }
 
 #[async_trait]
@@ -178,15 +178,12 @@ impl VoiceEventHandler for Periodic {
                 // what i mean by this is create some functions and call the functions instead
                 // we want to utilize DRY (DON'T REPEAT YOURSELF) principles
                 if members.unwrap().len() <= 1 {
-                    let manager = songbird::get(&self.ctx)
-                        .await
-                        .expect("Songbird Voice client placed in at initialisation.")
-                        .clone();
+                    
 
-                    let has_handler = manager.get(guild_channel.guild_id).is_some();
+                    let has_handler = self.songbird_arc.get(guild_channel.guild_id).is_some();
 
                     if has_handler {
-                        if let Err(e) = manager.remove(guild_channel.guild_id).await {
+                        if let Err(e) = self.songbird_arc.remove(guild_channel.guild_id).await {
                             check_msg(
                                 self.message_channel_id
                                     .say(&self.http, format!("Failed: {:?}", e))
