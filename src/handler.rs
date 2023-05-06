@@ -11,7 +11,7 @@ use serenity::{
     http::Http,
     model::{
         gateway::Ready,
-        prelude::{Activity, ChannelId},
+        prelude::{Activity, ChannelId, GuildId},
     },
 };
 use songbird::{Event, EventContext, EventHandler as VoiceEventHandler};
@@ -80,8 +80,8 @@ impl EventHandler for Handler {
 }
 
 pub struct TrackEndNotifier {
-    pub guild: serenity::model::prelude::Guild,
-    pub chan_id: ChannelId,
+    pub guild_id: GuildId,
+    pub message_channel_id: ChannelId,
     pub http: Arc<Http>,
 }
 
@@ -89,9 +89,9 @@ pub struct TrackEndNotifier {
 impl VoiceEventHandler for TrackEndNotifier {
     async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
         if let EventContext::Track(track_list) = ctx {
-            pop_guild_queue(self.guild.id.to_string()).await;
+            pop_guild_queue(self.guild_id.to_string()).await;
             check_msg(
-                self.chan_id
+                self.message_channel_id
                     .say(
                         &self.http,
                         &format!(

@@ -129,8 +129,8 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                         handle.add_global_event(
                             Event::Track(TrackEvent::End),
                             TrackEndNotifier {
-                                guild,
-                                chan_id,
+                                guild_id,
+                                message_channel_id: chan_id,
                                 http: send_http,
                             },
                         );
