@@ -16,7 +16,7 @@ use songbird::{
 use tracing::{debug, error};
 
 use crate::{
-    context::{context_songbird_join, context_join_to_voice_channel},
+    context::context_join_to_voice_channel,
     database::{
         clear_guild_queue, get_guild_is_subscribed, set_guild_queue, set_joined_to_channel,
     },
@@ -103,15 +103,14 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
         Some(subscribed) => {
             debug!("subscribed option is some");
             if subscribed {
-                match context_join_to_voice_channel(ctx, msg, &guild).await
-                {
-                    Ok(result) => {
+                match context_join_to_voice_channel(ctx, msg, &guild).await {
+                    Ok(_result) => {
                         debug!("context join to voice channel is ok");
                         return Ok(());
-                    },
-                    Err(why) =>
-                    {
+                    }
+                    Err(why) => {
                         debug!("context join to voice channel is err");
+                        error!("{}", why);
                         return Ok(());
                     }
                 }
@@ -126,15 +125,14 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
         }
         None => {
             debug!("subscribed option is none");
-            match context_join_to_voice_channel(ctx, msg, &guild).await
-            {
-                Ok(result) => {
+            match context_join_to_voice_channel(ctx, msg, &guild).await {
+                Ok(_result) => {
                     debug!("context join to voice channel is ok");
                     return Ok(());
-                },
-                Err(why) =>
-                {
+                }
+                Err(why) => {
                     debug!("context join to voice channel is err");
+                    error!("{}", why);
                     return Ok(());
                 }
             }

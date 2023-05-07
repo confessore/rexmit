@@ -1,15 +1,16 @@
 use std::time::Duration;
 
 use serenity::{
-    model::prelude::{ChannelId, Message, PartialGuild, Guild},
+    model::prelude::{ChannelId, Guild, Message, PartialGuild},
     prelude::Context,
 };
-use songbird::{error::JoinError, Event, TrackEvent};
+use songbird::{error::JoinError, join, Event, TrackEvent};
 use tracing::{debug, error};
 
 use crate::{
     command::check_msg,
-    handler::{Periodic, TrackEndNotifier}, database::set_joined_to_channel,
+    database::set_joined_to_channel,
+    handler::{Periodic, TrackEndNotifier},
 };
 
 pub async fn context_get_guild(ctx: &Context, guild_id: u64) -> Option<PartialGuild> {
@@ -22,57 +23,22 @@ pub async fn context_get_guild(ctx: &Context, guild_id: u64) -> Option<PartialGu
     return None;
 }
 
-pub async fn context_songbird_join(
+pub async fn context_join_to_voice_channel(
     ctx: &Context,
     msg: &Message,
-    voice_channel_id: ChannelId,
+    guild: &Guild,
 ) -> Result<(), JoinError> {
     let songbird_arc_option = songbird::get(ctx).await;
     let songbird_arc = match songbird_arc_option {
-        Some(songbird_arc) => songbird_arc.clone(),
+        Some(songbird_arc) => {
+            debug!("songbird arc is some");
+            songbird_arc.clone()
+        }
         None => {
+            debug!("songbird arc is none");
             return Err(JoinError::Dropped);
         }
     };
-
-    let guild_id = match msg.guild_id {
-        Some(guild_id) => guild_id,
-        None => {
-            return Err(JoinError::Dropped);
-        }
-    };
-
-    let (call_mutex_arc, empty_joinerror_result) =
-        songbird_arc.join(guild_id, voice_channel_id).await;
-
-    match &empty_joinerror_result {
-        Ok(()) => {
-            let mut call_mutexguard = call_mutex_arc.lock().await;
-            call_mutexguard.add_global_event(
-                Event::Track(TrackEvent::End),
-                TrackEndNotifier {
-                    guild_id,
-                    message_channel_id: msg.channel_id,
-                    http: ctx.http.clone(),
-                },
-            );
-            call_mutexguard.add_global_event(
-                Event::Periodic(Duration::from_secs(1800), None),
-                Periodic {
-                    voice_channel_id,
-                    message_channel_id: msg.channel_id,
-                    http: ctx.http.clone(),
-                    cache: ctx.cache.clone(),
-                    songbird_arc,
-                },
-            );
-        }
-        Err(joinerror) => {}
-    }
-    return empty_joinerror_result;
-}
-
-pub async fn context_join_to_voice_channel(ctx: &Context, msg: &Message, guild: &Guild) -> Result<(), JoinError> {
     let voice_channel_id_option = guild
         .voice_states
         .get(&msg.author.id)
@@ -87,18 +53,39 @@ pub async fn context_join_to_voice_channel(ctx: &Context, msg: &Message, guild: 
             return Err(JoinError::Dropped);
         }
     };
-    match context_songbird_join(ctx, msg, voice_channel_id).await {
+    let (call_mutex_arc, empty_joinerror_result) =
+        songbird_arc.join(guild.id, voice_channel_id).await;
+    match empty_joinerror_result {
         Ok(()) => {
-            debug!("context join channel is ok");
+            debug!("empty joinerror result is ok");
+            let mut call_mutexguard = call_mutex_arc.lock().await;
+            call_mutexguard.add_global_event(
+                Event::Track(TrackEvent::End),
+                TrackEndNotifier {
+                    guild_id: guild.id,
+                    message_channel_id: msg.channel_id,
+                    http: ctx.http.clone(),
+                },
+            );
+            call_mutexguard.add_global_event(
+                Event::Periodic(Duration::from_secs(1800), None),
+                Periodic {
+                    voice_channel_id,
+                    message_channel_id: msg.channel_id,
+                    http: ctx.http.clone(),
+                    cache: ctx.cache.clone(),
+                    songbird_arc,
+                },
+            );
+
             set_joined_to_channel(
                 guild.id.to_string(),
                 Some(voice_channel_id.to_string()),
                 Some(msg.channel_id.to_string()),
             )
             .await;
-            check_msg(msg.channel_id.say(&ctx.http, "joined").await);
             return Ok(());
-        },
+        }
         Err(why) => {
             debug!("context join channel is err");
             error!("{}", why);
