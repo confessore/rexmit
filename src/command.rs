@@ -3,7 +3,7 @@ use std::time::Duration;
 use serenity::{
     framework::standard::{
         macros::{command, group},
-        Args, CommandResult,
+        Args, CommandResult, CommandError,
     },
     model::prelude::Message,
     prelude::Context,
@@ -103,23 +103,33 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
         Some(subscribed) => {
             debug!("subscribed option is some");
             if subscribed {
+                let log = "guild is subscribed";
+                debug!(log);
                 match context_join_to_voice_channel(ctx, msg, &guild).await {
                     Some(_success) => {
                         debug!("context join to voice channel is some");
                         return Ok(());
                     }
                     None => {
-                        debug!("context join to voice channel is none");
-                        return Ok(());
+                        let log = "context join to voice channel is none";
+                        debug!(log);
+                        check_msg(
+                            msg.channel_id
+                                .say(&ctx.http, log)
+                                .await,
+                        );
+                        return Err(CommandError::from(log));
                     }
                 }
             } else {
+                let log = "guild is not subscribed";
+                debug!(log);
                 check_msg(
                     msg.channel_id
-                        .say(&ctx.http, "oops! no subscription!")
+                        .say(&ctx.http, log)
                         .await,
                 );
-                return Ok(());
+                return Err(CommandError::from(log));
             }
         }
         None => {
@@ -131,7 +141,9 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                 }
                 None => {
                     debug!("context join to voice channel is none");
-                    return Ok(());
+                    let log = "context join to voice channel is none";
+                    debug!(log);
+                    return Err(CommandError::from(log));
                 }
             }
         }
@@ -411,17 +423,18 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             Ok(result) => {
                 match queue(ctx, msg, og_args.to_owned()).await {
                     Ok(result) => result,
-                    Err(_why) => {
+                    Err(why) => {
                         check_msg(msg.channel_id.say(&ctx.http, "unable to queue").await);
+                        return Err(why);
                     }
-                }
-                return Ok(result);
+                };
+                result
             }
-            Err(_why) => {
+            Err(why) => {
                 check_msg(msg.channel_id.say(&ctx.http, "unable to join").await);
-                return Ok(());
+                return Err(why);
             }
-        }
+        };
     }
 
     Ok(())
