@@ -3,7 +3,7 @@ use std::time::Duration;
 use serenity::{
     framework::standard::{
         macros::{command, group},
-        Args, CommandResult, CommandError,
+        Args, CommandError, CommandResult,
     },
     model::prelude::Message,
     prelude::Context,
@@ -113,22 +113,14 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                     None => {
                         let log = "context join to voice channel is none";
                         debug!(log);
-                        check_msg(
-                            msg.channel_id
-                                .say(&ctx.http, log)
-                                .await,
-                        );
+                        check_msg(msg.channel_id.say(&ctx.http, log).await);
                         return Err(CommandError::from(log));
                     }
                 }
             } else {
                 let log = "guild is not subscribed";
                 debug!(log);
-                check_msg(
-                    msg.channel_id
-                        .say(&ctx.http, log)
-                        .await,
-                );
+                check_msg(msg.channel_id.say(&ctx.http, log).await);
                 return Err(CommandError::from(log));
             }
         }

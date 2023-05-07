@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use serenity::{
-    model::prelude::{Guild, Message, PartialGuild, GuildId, ChannelId},
+    model::prelude::{ChannelId, Guild, GuildId, Message, PartialGuild},
     prelude::Context,
 };
 use songbird::{Event, TrackEvent};
@@ -101,13 +101,8 @@ pub async fn context_boot_guild(ctx: &Context, guild_id: GuildId) {
             match songbird_arc.remove(guild_id).await {
                 Ok(()) => {
                     debug!("songbird arc remove is ok");
-                    set_joined_to_channel(
-                        guild_id.to_string(),
-                        None,
-                        None,
-                    )
-                    .await;
-                } ,
+                    set_joined_to_channel(guild_id.to_string(), None, None).await;
+                }
                 Err(why) => {
                     debug!("songbird arc remove is err");
                     error!("{}", why);
