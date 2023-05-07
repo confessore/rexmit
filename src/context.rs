@@ -101,7 +101,6 @@ pub async fn context_boot_guild(ctx: &Context, guild_id: GuildId) {
             match songbird_arc.remove(guild_id).await {
                 Ok(()) => {
                     debug!("songbird arc remove is ok");
-                    set_joined_to_channel(guild_id.to_string(), None, None).await;
                 }
                 Err(why) => {
                     debug!("songbird arc remove is err");
@@ -113,4 +112,5 @@ pub async fn context_boot_guild(ctx: &Context, guild_id: GuildId) {
             debug!("songbird arc is none");
         }
     };
+    set_joined_to_channel(guild_id.to_string(), None, None).await;
 }

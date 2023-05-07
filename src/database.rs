@@ -2,6 +2,7 @@ use std::env;
 
 use chrono::{DateTime, Utc};
 use mongodb::{bson::doc, Client as MongoClient, Collection, Database};
+use serenity::model::prelude::GuildId;
 use tracing::{debug, error};
 
 use crate::models::guild::Guild;
@@ -607,7 +608,7 @@ pub async fn count_free_guilds_joined_to_channel() -> Option<u64> {
 ///
 /// some vector of string or none
 ///
-pub async fn get_first_free_guild_joined_to_channel() -> Option<Guild> {
+pub async fn get_first_free_guild_joined_to_channel() -> Option<GuildId> {
     let guild_collection_option = get_guild_collection().await;
     match guild_collection_option {
         Some(guild_collection) => {
@@ -618,7 +619,7 @@ pub async fn get_first_free_guild_joined_to_channel() -> Option<Guild> {
             match guild_option_result {
                 Ok(guild_option) => {
                     debug!("{}", "guild option result is ok");
-                    return guild_option;
+                    return Some(GuildId(guild_option.unwrap().id.parse::<u64>().unwrap()));
                 }
                 Err(why) => {
                     debug!("{}", "guild option result is err");

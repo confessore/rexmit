@@ -3,7 +3,7 @@ use crate::{
     database::{
         clear_guild_queue, count_free_guilds_joined_to_channel, count_guilds_joined_to_channel,
         count_subscribed_guilds_joined_to_channel, pop_guild_queue, set_joined_to_channel, get_first_free_guild_joined_to_channel,
-    },
+    }, context::context_boot_guild,
 };
 use serenity::{
     async_trait,
@@ -46,6 +46,7 @@ impl EventHandler for Handler {
             Some(free_guild) => {
                 debug!("free guild option is some");
                 info!("{:#?}", free_guild);
+                context_boot_guild(&ctx, free_guild).await;
             },
             None => {
                 debug!("free guild option is none");
