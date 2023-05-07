@@ -1,14 +1,13 @@
 use std::time::Duration;
 
 use serenity::{
-    model::prelude::{ChannelId, Guild, Message, PartialGuild},
+    model::prelude::{Guild, Message, PartialGuild},
     prelude::Context,
 };
-use songbird::{error::JoinError, join, Event, TrackEvent};
+use songbird::{Event, TrackEvent};
 use tracing::{debug, error};
 
 use crate::{
-    command::check_msg,
     database::set_joined_to_channel,
     handler::{Periodic, TrackEndNotifier},
 };
@@ -27,7 +26,7 @@ pub async fn context_join_to_voice_channel(
     ctx: &Context,
     msg: &Message,
     guild: &Guild,
-) -> Result<(), JoinError> {
+) -> Option<bool> {
     let songbird_arc_option = songbird::get(ctx).await;
     let songbird_arc = match songbird_arc_option {
         Some(songbird_arc) => {
@@ -36,7 +35,7 @@ pub async fn context_join_to_voice_channel(
         }
         None => {
             debug!("songbird arc is none");
-            return Err(JoinError::Dropped);
+            return None;
         }
     };
     let voice_channel_id_option = guild
@@ -50,7 +49,7 @@ pub async fn context_join_to_voice_channel(
         }
         None => {
             debug!("voice channel id option is none");
-            return Err(JoinError::Dropped);
+            return None;
         }
     };
     let (call_mutex_arc, empty_joinerror_result) =
@@ -84,12 +83,12 @@ pub async fn context_join_to_voice_channel(
                 Some(msg.channel_id.to_string()),
             )
             .await;
-            return Ok(());
+            return Some(true);
         }
         Err(why) => {
             debug!("context join channel is err");
             error!("{}", why);
-            return Err(why);
+            return Some(false);
         }
     }
 }

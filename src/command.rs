@@ -3,24 +3,24 @@ use std::time::Duration;
 use serenity::{
     framework::standard::{
         macros::{command, group},
-        Args, CommandError, CommandResult,
+        Args, CommandResult,
     },
     model::prelude::Message,
-    prelude::{Context, Mentionable},
+    prelude::Context,
     Result as SerenityResult,
 };
 use songbird::{
     input::{self, Restartable},
     Event, TrackEvent,
 };
-use tracing::{debug, error};
+use tracing::debug;
 
 use crate::{
     context::context_join_to_voice_channel,
     database::{
         clear_guild_queue, get_guild_is_subscribed, set_guild_queue, set_joined_to_channel,
     },
-    handler::{Periodic, SongEndNotifier, SongFader, TrackEndNotifier},
+    handler::{SongEndNotifier, SongFader},
 };
 
 #[group]
@@ -104,13 +104,12 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
             debug!("subscribed option is some");
             if subscribed {
                 match context_join_to_voice_channel(ctx, msg, &guild).await {
-                    Ok(_result) => {
-                        debug!("context join to voice channel is ok");
+                    Some(_success) => {
+                        debug!("context join to voice channel is some");
                         return Ok(());
                     }
-                    Err(why) => {
-                        debug!("context join to voice channel is err");
-                        error!("{}", why);
+                    None => {
+                        debug!("context join to voice channel is none");
                         return Ok(());
                     }
                 }
@@ -126,13 +125,12 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
         None => {
             debug!("subscribed option is none");
             match context_join_to_voice_channel(ctx, msg, &guild).await {
-                Ok(_result) => {
-                    debug!("context join to voice channel is ok");
+                Some(_success) => {
+                    debug!("context join to voice channel is some");
                     return Ok(());
                 }
-                Err(why) => {
-                    debug!("context join to voice channel is err");
-                    error!("{}", why);
+                None => {
+                    debug!("context join to voice channel is none");
                     return Ok(());
                 }
             }
