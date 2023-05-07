@@ -114,3 +114,5 @@ pub async fn context_boot_guild(ctx: &Context, guild_id: GuildId) {
     };
     set_joined_to_channel(guild_id.to_string(), None, None).await;
 }
+
+pub async fn context_repopulate_guild_queue(ctx: &Context, guild_id: GuildId) {}

@@ -1,9 +1,11 @@
 use crate::{
     command::check_msg,
+    context::context_boot_guild,
     database::{
         clear_guild_queue, count_free_guilds_joined_to_channel, count_guilds_joined_to_channel,
-        count_subscribed_guilds_joined_to_channel, pop_guild_queue, set_joined_to_channel, get_first_free_guild_joined_to_channel,
-    }, context::context_boot_guild,
+        count_subscribed_guilds_joined_to_channel, get_first_free_guild_joined_to_channel,
+        pop_guild_queue, set_joined_to_channel,
+    },
 };
 use serenity::{
     async_trait,
@@ -16,7 +18,7 @@ use serenity::{
 };
 use songbird::{Event, EventContext, EventHandler as VoiceEventHandler, Songbird};
 use std::sync::Arc;
-use tracing::{info, debug};
+use tracing::{debug, info};
 
 pub struct Handler;
 
@@ -47,7 +49,7 @@ impl EventHandler for Handler {
                 debug!("free guild option is some");
                 info!("{:#?}", free_guild);
                 context_boot_guild(&ctx, free_guild).await;
-            },
+            }
             None => {
                 debug!("free guild option is none");
             }

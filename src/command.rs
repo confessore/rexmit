@@ -30,8 +30,6 @@ use crate::{
 )]
 struct General;
 
-pub async fn rejoin_channels() {}
-
 #[command]
 async fn d(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     return deafen(ctx, msg, _args).await;
