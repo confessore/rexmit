@@ -116,79 +116,83 @@ pub async fn context_boot_guild(ctx: &Context, guild_id: GuildId) {
     set_joined_to_channel(guild_id.to_string(), None, None).await;
 }
 
+pub async fn context_rejoin_to_voice_channel(
+    ctx: &Context,
+    guild_id: GuildId,
+    voice_channel_id: ChannelId,
+    message_channel_id: ChannelId,
+) {
+    let songbird_arc_option = songbird::get(ctx).await;
+    match songbird_arc_option {
+        Some(songbird_arc) => {
+            debug!("songbird arc option is some");
+            let (call_mutex_arc, empty_joinerror_result) =
+                songbird_arc.join(guild_id, voice_channel_id).await;
+            match empty_joinerror_result {
+                Ok(()) => {
+                    debug!("empty joinerror result is ok");
+                    let mut call_mutexguard = call_mutex_arc.lock().await;
+                    call_mutexguard.add_global_event(
+                        Event::Track(TrackEvent::End),
+                        TrackEndNotifier {
+                            guild_id,
+                            message_channel_id,
+                            http: ctx.http.clone(),
+                        },
+                    );
+                    call_mutexguard.add_global_event(
+                        Event::Periodic(Duration::from_secs(1800), None),
+                        Periodic {
+                            voice_channel_id,
+                            message_channel_id,
+                            http: ctx.http.clone(),
+                            cache: ctx.cache.clone(),
+                            songbird_arc,
+                        },
+                    );
+                }
+                Err(why) => {
+                    debug!("context join channel is err");
+                    error!("{}", why);
+                }
+            };
+        }
+        None => {}
+    }
+}
+
 pub async fn context_repopulate_guild_queue(ctx: &Context, guild_id: GuildId) {
     let guild_option = get_guild_document(guild_id.to_string()).await;
     match guild_option {
         Some(guild) => {
             debug!("guild option is some");
-
+            let voice_channel_id = ChannelId(guild.voice_channel_id.parse::<u64>().unwrap());
+            let message_channel_id = ChannelId(guild.message_channel_id.parse::<u64>().unwrap());
+            context_rejoin_to_voice_channel(ctx, guild_id, voice_channel_id, message_channel_id).await;
             let songbird_arc_option = songbird::get(ctx).await;
             match songbird_arc_option {
                 Some(songbird_arc) => {
-                    debug!("songbird arc option is some");
-                    let voice_channel_id =
-                        ChannelId(guild.voice_channel_id.parse::<u64>().unwrap());
-                    let message_channel_id =
-                        ChannelId(guild.message_channel_id.parse::<u64>().unwrap());
-                    let (call_mutex_arc, empty_joinerror_result) =
-                        songbird_arc.join(guild_id, voice_channel_id).await;
-                    match empty_joinerror_result {
-                        Ok(()) => {
-                            debug!("empty joinerror result is ok");
-                            let mut call_mutexguard = call_mutex_arc.lock().await;
-                            call_mutexguard.add_global_event(
-                                Event::Track(TrackEvent::End),
-                                TrackEndNotifier {
-                                    guild_id: guild_id,
-                                    message_channel_id,
-                                    http: ctx.http.clone(),
-                                },
-                            );
-                            call_mutexguard.add_global_event(
-                                Event::Periodic(Duration::from_secs(1800), None),
-                                Periodic {
-                                    voice_channel_id,
-                                    message_channel_id,
-                                    http: ctx.http.clone(),
-                                    cache: ctx.cache.clone(),
-                                    songbird_arc,
-                                },
-                            );
-                        }
-                        Err(why) => {
-                            debug!("context join channel is err");
-                            error!("{}", why);
-                        }
-                    };
-                    let songbird_arc_option = songbird::get(ctx).await;
-                    match songbird_arc_option {
-                        Some(songbird_arc) => {
-                            if let Some(handler_lock) = songbird_arc.get(guild_id) {
-                                let mut handler = handler_lock.lock().await;
-                                for url in guild.queue {
-                                    // Here, we use lazy restartable sources to make sure that we don't pay
-                                    // for decoding, playback on tracks which aren't actually live yet.
-                                    match Restartable::ytdl(url, true).await {
-                                        Ok(source) => {
-                                            handler.enqueue_source(source.into());
-                                        }
-                                        Err(why) => {
-                                            println!("Err starting source: {:?}", why);
-                                        }
-                                    };
+                    if let Some(handler_lock) = songbird_arc.get(guild_id) {
+                        let mut handler = handler_lock.lock().await;
+                        for url in guild.queue {
+                            // Here, we use lazy restartable sources to make sure that we don't pay
+                            // for decoding, playback on tracks which aren't actually live yet.
+                            match Restartable::ytdl(url, true).await {
+                                Ok(source) => {
+                                    handler.enqueue_source(source.into());
                                 }
-                            }
+                                Err(why) => {
+                                    println!("Err starting source: {:?}", why);
+                                }
+                            };
                         }
-                        None => {}
                     }
                 }
-                None => {
-                    debug!("songbird arc option is none");
-                }
-            };
+                None => {}
+            }
         }
         None => {
             debug!("guild option is none");
         }
-    }
+    };
 }
