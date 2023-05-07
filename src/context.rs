@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use serenity::{
-    model::prelude::{Guild, Message, PartialGuild},
+    model::prelude::{Guild, Message, PartialGuild, GuildId, ChannelId},
     prelude::Context,
 };
 use songbird::{Event, TrackEvent};
@@ -31,7 +31,7 @@ pub async fn context_join_to_voice_channel(
     let songbird_arc = match songbird_arc_option {
         Some(songbird_arc) => {
             debug!("songbird arc is some");
-            songbird_arc.clone()
+            songbird_arc
         }
         None => {
             debug!("songbird arc is none");
@@ -91,4 +91,31 @@ pub async fn context_join_to_voice_channel(
             return Some(false);
         }
     }
+}
+
+pub async fn context_boot_guild(ctx: &Context, guild_id: GuildId) {
+    let songbird_arc_option = songbird::get(ctx).await;
+    match songbird_arc_option {
+        Some(songbird_arc) => {
+            debug!("songbird arc is some");
+            match songbird_arc.remove(guild_id).await {
+                Ok(()) => {
+                    debug!("songbird arc remove is ok");
+                    set_joined_to_channel(
+                        guild_id.to_string(),
+                        None,
+                        None,
+                    )
+                    .await;
+                } ,
+                Err(why) => {
+                    debug!("songbird arc remove is err");
+                    error!("{}", why);
+                }
+            };
+        }
+        None => {
+            debug!("songbird arc is none");
+        }
+    };
 }
