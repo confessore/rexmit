@@ -597,6 +597,43 @@ pub async fn count_free_guilds_joined_to_channel() -> Option<u64> {
     }
 }
 
+/// gets the first free guild that is found to be joined to channel in mongo
+///
+/// ### arguments
+///
+/// * `none` - none
+///
+/// ### returns
+///
+/// some vector of string or none
+///
+pub async fn get_first_free_guild_joined_to_channel() -> Option<Guild> {
+    let guild_collection_option = get_guild_collection().await;
+    match guild_collection_option {
+        Some(guild_collection) => {
+            debug!("{}", "guild collection is some");
+            let filter =
+                doc! { "expiration": { "$lt": Utc::now().to_string() }, "joined_to_voice": true };
+            let guild_option_result = guild_collection.find_one(filter, None).await;
+            match guild_option_result {
+                Ok(guild_option) => {
+                    debug!("{}", "guild option result is ok");
+                    return guild_option;
+                }
+                Err(why) => {
+                    debug!("{}", "guild option result is err");
+                    error!("{}", why);
+                    return None;
+                }
+            }
+        }
+        None => {
+            debug!("{}", "guild collection is none");
+            return None;
+        }
+    }
+}
+
 /// gets a guild queue in mongo given a guild id
 ///
 /// ### arguments
