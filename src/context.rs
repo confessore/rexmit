@@ -4,10 +4,11 @@ use serenity::{
     model::prelude::{ChannelId, Guild, GuildId, Message, PartialGuild},
     prelude::Context,
 };
-use songbird::{Event, TrackEvent};
+use songbird::{input::Restartable, Event, TrackEvent};
 use tracing::{debug, error};
 
 use crate::{
+    command::check_msg,
     database::{get_guild_queue, set_joined_to_channel},
     handler::{Periodic, TrackEndNotifier},
 };
@@ -124,6 +125,21 @@ pub async fn context_repopulate_guild_queue(ctx: &Context, guild_id: GuildId) {
             match songbird_arc_option {
                 Some(songbird_arc) => {
                     debug!("songbird arc option is some");
+                    if let Some(handler_lock) = songbird_arc.get(guild_id) {
+                        let mut handler = handler_lock.lock().await;
+                        for url in guild_queue {
+                            // Here, we use lazy restartable sources to make sure that we don't pay
+                            // for decoding, playback on tracks which aren't actually live yet.
+                            match Restartable::ytdl(url, true).await {
+                                Ok(source) => {
+                                    handler.enqueue_source(source.into());
+                                }
+                                Err(why) => {
+                                    println!("Err starting source: {:?}", why);
+                                }
+                            };
+                        }
+                    }
                 }
                 None => {
                     debug!("songbird arc option is none");
