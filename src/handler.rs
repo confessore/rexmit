@@ -1,10 +1,10 @@
 use crate::{
     command::check_msg,
-    context::context_boot_guild,
+    context::{context_boot_guild, context_repopulate_guild_queue},
     database::{
         clear_guild_queue, count_free_guilds_joined_to_channel, count_guilds_joined_to_channel,
         count_subscribed_guilds_joined_to_channel, get_first_free_guild_joined_to_channel,
-        pop_guild_queue, set_joined_to_channel,
+        pop_guild_queue, set_joined_to_channel, get_guilds_joined_to_channel,
     },
 };
 use serenity::{
@@ -39,9 +39,22 @@ impl EventHandler for Handler {
             info!("sub guilds: {}", sub_guilds_option.unwrap())
         }
 
-        let guilds_option = count_guilds_joined_to_channel().await;
-        if guilds_option.is_some() {
-            info!("total guilds: {}", guilds_option.unwrap())
+        let count_option = count_guilds_joined_to_channel().await;
+        if count_option.is_some() {
+            info!("total guilds: {}", count_option.unwrap())
+        }
+
+        let guilds_option = get_guilds_joined_to_channel().await;
+        match guilds_option {
+            Some(guilds) => {
+                debug!("guilds option is some");
+                for guild_id in guilds {
+                    context_repopulate_guild_queue(&ctx, GuildId(guild_id.parse::<u64>().unwrap())).await;
+                }
+            },
+            None => {
+                debug!("guilds option is none");
+            }
         }
 
         match get_first_free_guild_joined_to_channel().await {
