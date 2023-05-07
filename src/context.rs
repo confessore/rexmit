@@ -8,7 +8,7 @@ use songbird::{Event, TrackEvent};
 use tracing::{debug, error};
 
 use crate::{
-    database::set_joined_to_channel,
+    database::{get_guild_queue, set_joined_to_channel},
     handler::{Periodic, TrackEndNotifier},
 };
 
@@ -115,4 +115,23 @@ pub async fn context_boot_guild(ctx: &Context, guild_id: GuildId) {
     set_joined_to_channel(guild_id.to_string(), None, None).await;
 }
 
-pub async fn context_repopulate_guild_queue(ctx: &Context, guild_id: GuildId) {}
+pub async fn context_repopulate_guild_queue(ctx: &Context, guild_id: GuildId) {
+    let guild_queue_option = get_guild_queue(guild_id.to_string()).await;
+    match guild_queue_option {
+        Some(guild_queue) => {
+            debug!("guild queue option is some");
+            let songbird_arc_option = songbird::get(ctx).await;
+            match songbird_arc_option {
+                Some(songbird_arc) => {
+                    debug!("songbird arc option is some");
+                }
+                None => {
+                    debug!("songbird arc option is none");
+                }
+            };
+        }
+        None => {
+            debug!("guild queue option is none");
+        }
+    }
+}
