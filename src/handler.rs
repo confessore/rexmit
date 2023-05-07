@@ -2,7 +2,7 @@ use crate::{
     command::check_msg,
     database::{
         clear_guild_queue, count_free_guilds_joined_to_channel, count_guilds_joined_to_channel,
-        count_subscribed_guilds_joined_to_channel, pop_guild_queue, set_joined_to_channel,
+        count_subscribed_guilds_joined_to_channel, pop_guild_queue, set_joined_to_channel, get_first_free_guild_joined_to_channel,
     },
 };
 use serenity::{
@@ -16,7 +16,7 @@ use serenity::{
 };
 use songbird::{Event, EventContext, EventHandler as VoiceEventHandler, Songbird};
 use std::sync::Arc;
-use tracing::info;
+use tracing::{info, debug};
 
 pub struct Handler;
 
@@ -40,6 +40,16 @@ impl EventHandler for Handler {
         let guilds_option = count_guilds_joined_to_channel().await;
         if guilds_option.is_some() {
             info!("total guilds: {}", guilds_option.unwrap())
+        }
+
+        match get_first_free_guild_joined_to_channel().await {
+            Some(free_guild) => {
+                debug!("free guild option is some");
+                info!("{:#?}", free_guild);
+            },
+            None => {
+                debug!("free guild option is none");
+            }
         }
 
         //checking guild queues, could use better naming
