@@ -178,8 +178,6 @@ impl VoiceEventHandler for Periodic {
                 // what i mean by this is create some functions and call the functions instead
                 // we want to utilize DRY (DON'T REPEAT YOURSELF) principles
                 if members.unwrap().len() <= 1 {
-                    
-
                     let has_handler = self.songbird_arc.get(guild_channel.guild_id).is_some();
 
                     if has_handler {

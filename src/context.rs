@@ -1,9 +1,15 @@
 use std::time::Duration;
 
-use serenity::{model::prelude::{PartialGuild, ChannelId, Message}, prelude::Context};
-use songbird::{error::JoinError, TrackEvent, Event};
+use serenity::{
+    model::prelude::{ChannelId, Message, PartialGuild},
+    prelude::Context,
+};
+use songbird::{error::JoinError, Event, TrackEvent};
 
-use crate::{command::check_msg, handler::{TrackEndNotifier, Periodic}};
+use crate::{
+    command::check_msg,
+    handler::{Periodic, TrackEndNotifier},
+};
 
 pub async fn context_get_guild(ctx: &Context, guild_id: u64) -> Option<PartialGuild> {
     let partial_guild_result = ctx.http.get_guild(guild_id).await;
@@ -15,8 +21,11 @@ pub async fn context_get_guild(ctx: &Context, guild_id: u64) -> Option<PartialGu
     return None;
 }
 
-pub async fn context_join_channel(ctx: &Context, msg: &Message, voice_channel_id: ChannelId) -> Result<(), JoinError> {
-
+pub async fn context_join_channel(
+    ctx: &Context,
+    msg: &Message,
+    voice_channel_id: ChannelId,
+) -> Result<(), JoinError> {
     let songbird_arc_option = songbird::get(ctx).await;
     let songbird_arc = match songbird_arc_option {
         Some(songbird_arc) => songbird_arc.clone(),
@@ -32,7 +41,8 @@ pub async fn context_join_channel(ctx: &Context, msg: &Message, voice_channel_id
         }
     };
 
-    let (call_mutex_arc, empty_joinerror_result) = songbird_arc.join(guild_id, voice_channel_id).await;
+    let (call_mutex_arc, empty_joinerror_result) =
+        songbird_arc.join(guild_id, voice_channel_id).await;
 
     match &empty_joinerror_result {
         Ok(()) => {
@@ -52,13 +62,11 @@ pub async fn context_join_channel(ctx: &Context, msg: &Message, voice_channel_id
                     message_channel_id: msg.channel_id,
                     http: ctx.http.clone(),
                     cache: ctx.cache.clone(),
-                    songbird_arc
-                }
+                    songbird_arc,
+                },
             );
-        },
-        Err(joinerror) => {
-            
         }
+        Err(joinerror) => {}
     }
     return empty_joinerror_result;
 }
