@@ -1,14 +1,15 @@
 use std::time::Duration;
 
 use serenity::{
-    model::prelude::{ChannelId, Message, PartialGuild},
+    model::prelude::{ChannelId, Message, PartialGuild, Guild},
     prelude::Context,
 };
 use songbird::{error::JoinError, Event, TrackEvent};
+use tracing::{debug, error};
 
 use crate::{
     command::check_msg,
-    handler::{Periodic, TrackEndNotifier},
+    handler::{Periodic, TrackEndNotifier}, database::set_joined_to_channel,
 };
 
 pub async fn context_get_guild(ctx: &Context, guild_id: u64) -> Option<PartialGuild> {
@@ -21,7 +22,7 @@ pub async fn context_get_guild(ctx: &Context, guild_id: u64) -> Option<PartialGu
     return None;
 }
 
-pub async fn context_join_channel(
+pub async fn context_songbird_join(
     ctx: &Context,
     msg: &Message,
     voice_channel_id: ChannelId,
@@ -69,4 +70,39 @@ pub async fn context_join_channel(
         Err(joinerror) => {}
     }
     return empty_joinerror_result;
+}
+
+pub async fn context_join_to_voice_channel(ctx: &Context, msg: &Message, guild: &Guild) -> Result<(), JoinError> {
+    let voice_channel_id_option = guild
+        .voice_states
+        .get(&msg.author.id)
+        .and_then(|voice_state| voice_state.channel_id);
+    let voice_channel_id = match voice_channel_id_option {
+        Some(voice_channel_id) => {
+            debug!("voice channel id option is some");
+            voice_channel_id
+        }
+        None => {
+            debug!("voice channel id option is none");
+            return Err(JoinError::Dropped);
+        }
+    };
+    match context_songbird_join(ctx, msg, voice_channel_id).await {
+        Ok(()) => {
+            debug!("context join channel is ok");
+            set_joined_to_channel(
+                guild.id.to_string(),
+                Some(voice_channel_id.to_string()),
+                Some(msg.channel_id.to_string()),
+            )
+            .await;
+            check_msg(msg.channel_id.say(&ctx.http, "joined").await);
+            return Ok(());
+        },
+        Err(why) => {
+            debug!("context join channel is err");
+            error!("{}", why);
+            return Err(why);
+        }
+    }
 }

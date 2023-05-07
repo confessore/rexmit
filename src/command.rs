@@ -16,7 +16,7 @@ use songbird::{
 use tracing::{debug, error};
 
 use crate::{
-    context::context_join_channel,
+    context::{context_songbird_join, context_join_to_voice_channel},
     database::{
         clear_guild_queue, get_guild_is_subscribed, set_guild_queue, set_joined_to_channel,
     },
@@ -98,41 +98,20 @@ async fn j(ctx: &Context, msg: &Message) -> CommandResult {
 #[only_in(guilds)]
 async fn join(ctx: &Context, msg: &Message) -> CommandResult {
     let guild = msg.guild(&ctx.cache).unwrap();
-    let guild_id = guild.id;
-    let subscribed_option = get_guild_is_subscribed(guild_id.to_string()).await;
+    let subscribed_option = get_guild_is_subscribed(guild.id.to_string()).await;
     match subscribed_option {
         Some(subscribed) => {
             debug!("subscribed option is some");
             if subscribed {
-                let voice_channel_id_option = guild
-                    .voice_states
-                    .get(&msg.author.id)
-                    .and_then(|voice_state| voice_state.channel_id);
-                let voice_channel_id = match voice_channel_id_option {
-                    Some(voice_channel_id) => {
-                        debug!("voice channel id option is some");
-                        voice_channel_id
-                    }
-                    None => {
-                        debug!("voice channel id option is none");
+                match context_join_to_voice_channel(ctx, msg, &guild).await
+                {
+                    Ok(result) => {
+                        debug!("context join to voice channel is ok");
                         return Ok(());
-                    }
-                };
-                match context_join_channel(ctx, msg, voice_channel_id).await {
-                    Ok(()) => {
-                        debug!("context join channel is ok");
-                        set_joined_to_channel(
-                            guild_id.to_string(),
-                            Some(voice_channel_id.to_string()),
-                            Some(msg.channel_id.to_string()),
-                        )
-                        .await;
-                        check_msg(msg.channel_id.say(&ctx.http, "joined").await);
-                        return Ok(());
-                    }
-                    Err(why) => {
-                        debug!("context join channel is err");
-                        error!("{}", why);
+                    },
+                    Err(why) =>
+                    {
+                        debug!("context join to voice channel is err");
                         return Ok(());
                     }
                 }
@@ -147,35 +126,15 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
         }
         None => {
             debug!("subscribed option is none");
-            let voice_channel_id_option = guild
-                .voice_states
-                .get(&msg.author.id)
-                .and_then(|voice_state| voice_state.channel_id);
-            let voice_channel_id = match voice_channel_id_option {
-                Some(voice_channel_id) => {
-                    debug!("voice channel id option is some");
-                    voice_channel_id
-                }
-                None => {
-                    debug!("voice channel id option is some");
+            match context_join_to_voice_channel(ctx, msg, &guild).await
+            {
+                Ok(result) => {
+                    debug!("context join to voice channel is ok");
                     return Ok(());
-                }
-            };
-            match context_join_channel(ctx, msg, voice_channel_id).await {
-                Ok(()) => {
-                    debug!("context join channel is ok");
-                    set_joined_to_channel(
-                        guild_id.to_string(),
-                        Some(voice_channel_id.to_string()),
-                        Some(msg.channel_id.to_string()),
-                    )
-                    .await;
-                    check_msg(msg.channel_id.say(&ctx.http, "joined").await);
-                    return Ok(());
-                }
-                Err(why) => {
-                    debug!("context join channel is err");
-                    error!("{}", why);
+                },
+                Err(why) =>
+                {
+                    debug!("context join to voice channel is err");
                     return Ok(());
                 }
             }
