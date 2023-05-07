@@ -9,7 +9,7 @@ use tracing::{debug, error};
 
 use crate::{
     command::check_msg,
-    database::{get_guild_queue, set_joined_to_channel},
+    database::{get_guild_document, get_guild_queue, set_joined_to_channel},
     handler::{Periodic, TrackEndNotifier},
 };
 
@@ -117,28 +117,69 @@ pub async fn context_boot_guild(ctx: &Context, guild_id: GuildId) {
 }
 
 pub async fn context_repopulate_guild_queue(ctx: &Context, guild_id: GuildId) {
-    let guild_queue_option = get_guild_queue(guild_id.to_string()).await;
-    match guild_queue_option {
-        Some(guild_queue) => {
-            debug!("guild queue option is some");
+    let guild_option = get_guild_document(guild_id.to_string()).await;
+    match guild_option {
+        Some(guild) => {
+            debug!("guild option is some");
+
             let songbird_arc_option = songbird::get(ctx).await;
             match songbird_arc_option {
                 Some(songbird_arc) => {
                     debug!("songbird arc option is some");
-                    if let Some(handler_lock) = songbird_arc.get(guild_id) {
-                        let mut handler = handler_lock.lock().await;
-                        for url in guild_queue {
-                            // Here, we use lazy restartable sources to make sure that we don't pay
-                            // for decoding, playback on tracks which aren't actually live yet.
-                            match Restartable::ytdl(url, true).await {
-                                Ok(source) => {
-                                    handler.enqueue_source(source.into());
-                                }
-                                Err(why) => {
-                                    println!("Err starting source: {:?}", why);
-                                }
-                            };
+                    let voice_channel_id =
+                        ChannelId(guild.voice_channel_id.parse::<u64>().unwrap());
+                    let message_channel_id =
+                        ChannelId(guild.message_channel_id.parse::<u64>().unwrap());
+                    let (call_mutex_arc, empty_joinerror_result) =
+                        songbird_arc.join(guild_id, voice_channel_id).await;
+                    match empty_joinerror_result {
+                        Ok(()) => {
+                            debug!("empty joinerror result is ok");
+                            let mut call_mutexguard = call_mutex_arc.lock().await;
+                            call_mutexguard.add_global_event(
+                                Event::Track(TrackEvent::End),
+                                TrackEndNotifier {
+                                    guild_id: guild_id,
+                                    message_channel_id,
+                                    http: ctx.http.clone(),
+                                },
+                            );
+                            call_mutexguard.add_global_event(
+                                Event::Periodic(Duration::from_secs(1800), None),
+                                Periodic {
+                                    voice_channel_id,
+                                    message_channel_id,
+                                    http: ctx.http.clone(),
+                                    cache: ctx.cache.clone(),
+                                    songbird_arc,
+                                },
+                            );
                         }
+                        Err(why) => {
+                            debug!("context join channel is err");
+                            error!("{}", why);
+                        }
+                    };
+                    let songbird_arc_option = songbird::get(ctx).await;
+                    match songbird_arc_option {
+                        Some(songbird_arc) => {
+                            if let Some(handler_lock) = songbird_arc.get(guild_id) {
+                                let mut handler = handler_lock.lock().await;
+                                for url in guild.queue {
+                                    // Here, we use lazy restartable sources to make sure that we don't pay
+                                    // for decoding, playback on tracks which aren't actually live yet.
+                                    match Restartable::ytdl(url, true).await {
+                                        Ok(source) => {
+                                            handler.enqueue_source(source.into());
+                                        }
+                                        Err(why) => {
+                                            println!("Err starting source: {:?}", why);
+                                        }
+                                    };
+                                }
+                            }
+                        }
+                        None => {}
                     }
                 }
                 None => {
@@ -147,7 +188,7 @@ pub async fn context_repopulate_guild_queue(ctx: &Context, guild_id: GuildId) {
             };
         }
         None => {
-            debug!("guild queue option is none");
+            debug!("guild option is none");
         }
     }
 }

@@ -4,7 +4,7 @@ use crate::{
     database::{
         clear_guild_queue, count_free_guilds_joined_to_channel, count_guilds_joined_to_channel,
         count_subscribed_guilds_joined_to_channel, get_first_free_guild_joined_to_channel,
-        pop_guild_queue, set_joined_to_channel, get_guilds_joined_to_channel,
+        get_guilds_joined_to_channel, pop_guild_queue, set_joined_to_channel,
     },
 };
 use serenity::{
@@ -49,9 +49,10 @@ impl EventHandler for Handler {
             Some(guilds) => {
                 debug!("guilds option is some");
                 for guild_id in guilds {
-                    context_repopulate_guild_queue(&ctx, GuildId(guild_id.parse::<u64>().unwrap())).await;
+                    context_repopulate_guild_queue(&ctx, GuildId(guild_id.parse::<u64>().unwrap()))
+                        .await;
                 }
-            },
+            }
             None => {
                 debug!("guilds option is none");
             }
