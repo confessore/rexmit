@@ -619,7 +619,26 @@ pub async fn get_first_free_guild_joined_to_channel() -> Option<GuildId> {
             match guild_option_result {
                 Ok(guild_option) => {
                     debug!("{}", "guild option result is ok");
-                    return Some(GuildId(guild_option.unwrap().id.parse::<u64>().unwrap()));
+                    match guild_option {
+                        Some(guild) => {
+                            debug!("guild option is some");
+                            match guild.id.parse::<u64>() {
+                                Ok(guild_id) => {
+                                    debug!("guild id result is ok");
+                                    return Some(GuildId(guild_id));
+                                },
+                                Err(why) => {
+                                    debug!("guild id result is err");
+                                    error!("{}", why);
+                                    return None;
+                                }
+                            };
+                        },
+                        None => {
+                            debug!("guild option is none");
+                            return None;
+                        }
+                    }
                 }
                 Err(why) => {
                     debug!("{}", "guild option result is err");
