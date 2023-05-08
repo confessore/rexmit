@@ -1,10 +1,10 @@
-use std::{time::Duration, sync::Arc, error::Error};
+use std::{error::Error, sync::Arc, time::Duration};
 
 use serenity::{
     model::prelude::{ChannelId, Guild, GuildId, Message, PartialGuild},
     prelude::Context,
 };
-use songbird::{input::Restartable, Event, TrackEvent, Songbird};
+use songbird::{input::Restartable, Event, Songbird, TrackEvent};
 use tracing::{debug, error};
 
 use crate::{
@@ -166,14 +166,24 @@ pub async fn context_rejoin_to_voice_channel(
     }
 }
 
-pub async fn context_repopulate_guild_queue(ctx: &Context, guild_id: GuildId) -> Option<Arc<Songbird>> {
+pub async fn context_repopulate_guild_queue(
+    ctx: &Context,
+    guild_id: GuildId,
+) -> Option<Arc<Songbird>> {
     let guild_option = get_guild_document(guild_id.to_string()).await;
     match guild_option {
         Some(guild) => {
             debug!("guild option is some");
             let voice_channel_id = ChannelId(guild.voice_channel_id.parse::<u64>().unwrap());
             let message_channel_id = ChannelId(guild.message_channel_id.parse::<u64>().unwrap());
-            match context_rejoin_to_voice_channel(ctx, guild_id, voice_channel_id, message_channel_id).await {
+            match context_rejoin_to_voice_channel(
+                ctx,
+                guild_id,
+                voice_channel_id,
+                message_channel_id,
+            )
+            .await
+            {
                 Some(songbird_arc) => {
                     debug!("songbird arc is some");
                     if let Some(handler_lock) = songbird_arc.get(guild_id) {
@@ -195,7 +205,7 @@ pub async fn context_repopulate_guild_queue(ctx: &Context, guild_id: GuildId) ->
                         }
                     }
                     return Some(songbird_arc);
-                },
+                }
                 None => {
                     debug!("songbird arc is none");
                     return None;
