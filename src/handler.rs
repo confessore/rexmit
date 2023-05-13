@@ -28,7 +28,7 @@ impl EventHandler for Handler {
         ctx.set_activity(Activity::listening("~q <youtube url>"))
             .await;
         println!("{} is connected!", ready.user.name);
-
+        /*
         let free_guilds_option = count_free_guilds_joined_to_channel().await;
         if free_guilds_option.is_some() {
             info!("free guilds: {}", free_guilds_option.unwrap())
@@ -68,6 +68,7 @@ impl EventHandler for Handler {
                 debug!("free guild option is none");
             }
         }
+        */
 
         //checking guild queues, could use better naming
         /*let joined_guilds_option = get_guilds_joined_to_channel().await;
