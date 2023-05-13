@@ -1,4 +1,5 @@
-pub mod models;
 pub mod command;
-pub mod database;
 pub mod context;
+pub mod database;
+pub mod handler;
+pub mod models;

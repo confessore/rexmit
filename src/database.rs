@@ -1,25 +1,22 @@
 use std::env;
 
 use chrono::{DateTime, Utc};
-use mongodb::{
-    Client as MongoClient,
-    Collection, Database, bson::doc
-};
+use mongodb::{bson::doc, Client as MongoClient, Collection, Database};
+use serenity::model::prelude::GuildId;
 use tracing::{debug, error};
 
 use crate::models::guild::Guild;
 
-
 /// gets the rexmit database from mongo
-/// 
+///
 /// ### arguments
-/// 
+///
 /// * `none` - none
-/// 
-/// ### returns 
-/// 
+///
+/// ### returns
+///
 /// some database
-/// 
+///
 pub async fn get_rexmit_database() -> Option<Database> {
     let database_url_result: Result<String, env::VarError> = std::env::var("DATABASE_URL");
     match database_url_result {
@@ -31,14 +28,14 @@ pub async fn get_rexmit_database() -> Option<Database> {
                     debug!("client result is ok");
                     let database = client.database("rexmit");
                     return Some(database);
-                },
+                }
                 Err(why) => {
                     debug!("client result is err");
                     error!("{}", why);
                     return None;
                 }
             }
-        },
+        }
         Err(why) => {
             debug!("database url result is err");
             error!("{}", why);
@@ -48,15 +45,15 @@ pub async fn get_rexmit_database() -> Option<Database> {
 }
 
 /// gets the rexmit guild collection from mongo
-/// 
+///
 /// ### arguments
-/// 
+///
 /// * `none` - none
-/// 
-/// ### returns 
-/// 
+///
+/// ### returns
+///
 /// some collection of guild
-/// 
+///
 pub async fn get_guild_collection() -> Option<Collection<Guild>> {
     let database_option = get_rexmit_database().await;
     match database_option {
@@ -64,7 +61,7 @@ pub async fn get_guild_collection() -> Option<Collection<Guild>> {
             debug!("database option is some");
             let collection: Collection<Guild> = database.collection("guilds");
             return Some(collection);
-        },
+        }
         None => {
             debug!("database option is none");
             return None;
@@ -75,13 +72,13 @@ pub async fn get_guild_collection() -> Option<Collection<Guild>> {
 /// gets a guild document from mongo given a discord guild id
 ///
 /// ### arguments
-/// 
+///
 /// * `guild_id` - the discord issued id for the guild
-/// 
-/// ### returns 
-/// 
+///
+/// ### returns
+///
 /// some guild or none
-/// 
+///
 pub async fn get_guild_document(guild_id: String) -> Option<Guild> {
     let guild_collection_option = get_guild_collection().await;
     match &guild_collection_option {
@@ -96,20 +93,20 @@ pub async fn get_guild_document(guild_id: String) -> Option<Guild> {
                         Some(guild) => {
                             debug!("guild is some");
                             return Some(guild);
-                        }, 
+                        }
                         None => {
                             debug!("guild is none");
                             return insert_new_guild(&guild_collection_option, guild_id).await;
                         }
                     }
-                },
+                }
                 Err(why) => {
                     debug!("guild option result is err");
                     error!("{}", why);
                     return None;
                 }
             }
-        },
+        }
         None => {
             debug!("guild collection option is none");
             return None;
@@ -120,20 +117,22 @@ pub async fn get_guild_document(guild_id: String) -> Option<Guild> {
 /// sets a guild document in mongo given a guild
 ///
 /// ### arguments
-/// 
+///
 /// * `guild` - the rexmit guild model
-/// 
-/// ### returns 
-/// 
+///
+/// ### returns
+///
 /// some guild or none
-/// 
+///
 pub async fn set_guild_document(guild: &Guild) -> Option<Guild> {
     let guild_collection_option = get_guild_collection().await;
     match &guild_collection_option {
         Some(guild_collection) => {
             debug!("guild collection option is some");
             let filter = doc! { "id": &guild.id };
-            let guild_option_result = guild_collection.find_one_and_replace(filter, guild, None).await;
+            let guild_option_result = guild_collection
+                .find_one_and_replace(filter, guild, None)
+                .await;
             match guild_option_result {
                 Ok(guild_option) => {
                     debug!("guild option result is ok");
@@ -141,20 +140,24 @@ pub async fn set_guild_document(guild: &Guild) -> Option<Guild> {
                         Some(guild) => {
                             debug!("guild is some");
                             return Some(guild);
-                        }, 
+                        }
                         None => {
                             debug!("guild is none");
-                            return insert_new_guild(&guild_collection_option, guild.id.to_string()).await;
+                            return insert_new_guild(
+                                &guild_collection_option,
+                                guild.id.to_string(),
+                            )
+                            .await;
                         }
                     }
-                },
+                }
                 Err(why) => {
                     debug!("guild option result is err");
                     error!("{}", why);
                     return None;
                 }
             }
-        },
+        }
         None => {
             debug!("guild collection option is none");
             return None;
@@ -165,15 +168,18 @@ pub async fn set_guild_document(guild: &Guild) -> Option<Guild> {
 /// inserts a new guild document into mongo given a discord guild id
 ///
 /// ### arguments
-/// 
+///
 /// * `guild_collection_option` - the mongo guild collection option reference
 /// * `guild_id` - the discord issued id for the guild
-/// 
-/// ### returns 
-/// 
+///
+/// ### returns
+///
 /// some guild or none
-/// 
-pub async fn insert_new_guild(guild_collection_option: &Option<Collection<Guild>>, guild_id: String) -> Option<Guild> {
+///
+pub async fn insert_new_guild(
+    guild_collection_option: &Option<Collection<Guild>>,
+    guild_id: String,
+) -> Option<Guild> {
     match guild_collection_option {
         Some(guild_collection) => {
             debug!("guild collection option reference is some");
@@ -182,14 +188,15 @@ pub async fn insert_new_guild(guild_collection_option: &Option<Collection<Guild>
             match insert_one_result_result {
                 Ok(_insert_one_result) => {
                     debug!("insert one result result is ok");
-                    return Some(guild)},
+                    return Some(guild);
+                }
                 Err(why) => {
                     debug!("insert one result result is err");
                     error!("{}", why);
                     return None;
                 }
             }
-        },
+        }
         None => {
             debug!("guild collection option reference is none");
             return None;
@@ -200,14 +207,14 @@ pub async fn insert_new_guild(guild_collection_option: &Option<Collection<Guild>
 /// sets a guild's queue in mongo given a guild id and a queue
 ///
 /// ### arguments
-/// 
+///
 /// * `guild_id` - the discord issued id for the guild
 /// * `queue` - a vector of string track urls
-/// 
-/// ### returns 
-/// 
+///
+/// ### returns
+///
 /// some guild or none
-/// 
+///
 pub async fn set_guild_queue(guild_id: String, queue: Vec<String>) -> Option<Guild> {
     let guild_collection_option = get_guild_collection().await;
     match &guild_collection_option {
@@ -215,7 +222,9 @@ pub async fn set_guild_queue(guild_id: String, queue: Vec<String>) -> Option<Gui
             debug!("guild collection option is some");
             let filter = doc! { "id": &guild_id };
             let update = doc! { "$set": { "queue": &queue }};
-            let guild_option_result = guild_collection.find_one_and_update(filter, update, None).await;
+            let guild_option_result = guild_collection
+                .find_one_and_update(filter, update, None)
+                .await;
             match guild_option_result {
                 Ok(guild_option) => {
                     debug!("guild option result is ok");
@@ -223,21 +232,22 @@ pub async fn set_guild_queue(guild_id: String, queue: Vec<String>) -> Option<Gui
                         Some(guild) => {
                             debug!("guild option is some");
                             return Some(guild);
-                        },
+                        }
                         None => {
                             debug!("guild option is none");
-                            let guild_option = insert_new_guild(&guild_collection_option, guild_id).await;
+                            let guild_option =
+                                insert_new_guild(&guild_collection_option, guild_id).await;
                             return guild_option;
                         }
                     }
-                },
+                }
                 Err(why) => {
                     debug!("guild option result is err");
                     error!("{}", why);
                     return None;
                 }
             }
-        },
+        }
         None => {
             debug!("guild collection option is none");
             return None;
@@ -248,13 +258,13 @@ pub async fn set_guild_queue(guild_id: String, queue: Vec<String>) -> Option<Gui
 /// clears a guild's queue in mongo given a discord guild id
 ///
 /// ### arguments
-/// 
+///
 /// * `guild_id` - the discord issued id for the guild
-/// 
-/// ### returns 
-/// 
+///
+/// ### returns
+///
 /// some guild or none
-/// 
+///
 pub async fn clear_guild_queue(guild_id: String) -> Option<Guild> {
     let guild_collection_option = get_guild_collection().await;
     match &guild_collection_option {
@@ -263,7 +273,9 @@ pub async fn clear_guild_queue(guild_id: String) -> Option<Guild> {
             let filter = doc! { "id": &guild_id };
             let queue: Vec<String> = vec![];
             let update = doc! { "$set": { "queue": queue }};
-            let guild_option_result = guild_collection.find_one_and_update(filter, update, None).await;
+            let guild_option_result = guild_collection
+                .find_one_and_update(filter, update, None)
+                .await;
             match guild_option_result {
                 Ok(guild_option) => {
                     debug!("guild option result is ok");
@@ -271,21 +283,22 @@ pub async fn clear_guild_queue(guild_id: String) -> Option<Guild> {
                         Some(guild) => {
                             debug!("guild option is some");
                             return Some(guild);
-                        },
+                        }
                         None => {
                             debug!("guild option is none");
-                            let guild_option = insert_new_guild(&guild_collection_option, guild_id).await;
+                            let guild_option =
+                                insert_new_guild(&guild_collection_option, guild_id).await;
                             return guild_option;
                         }
                     }
-                },
+                }
                 Err(why) => {
                     debug!("guild option result is err");
                     error!("{}", why);
                     return None;
                 }
             }
-        },
+        }
         None => {
             debug!("guild collection option is none");
             return None;
@@ -296,13 +309,13 @@ pub async fn clear_guild_queue(guild_id: String) -> Option<Guild> {
 /// directly pops the 0 index of a guild's queue in mongo given a guild id and returns the guild document
 ///
 /// ### arguments
-/// 
+///
 /// * `guild_id` - the discord issued id for the guild
-/// 
-/// ### returns 
-/// 
+///
+/// ### returns
+///
 /// some guild or none
-/// 
+///
 pub async fn pop_guild_queue(guild_id: String) -> Option<Guild> {
     let guild_collection_option = get_guild_collection().await;
     match &guild_collection_option {
@@ -310,7 +323,9 @@ pub async fn pop_guild_queue(guild_id: String) -> Option<Guild> {
             debug!("guild collection option is some");
             let filter = doc! { "id": &guild_id };
             let update = doc! { "$pop": { "queue": -1 }};
-            let guild_option_result = guild_collection.find_one_and_update(filter, update, None).await;
+            let guild_option_result = guild_collection
+                .find_one_and_update(filter, update, None)
+                .await;
             match guild_option_result {
                 Ok(guild_option) => {
                     debug!("guild option result is ok");
@@ -318,21 +333,22 @@ pub async fn pop_guild_queue(guild_id: String) -> Option<Guild> {
                         Some(guild) => {
                             debug!("guild option is some");
                             return Some(guild);
-                        }, 
+                        }
                         None => {
                             debug!("guild option is none");
-                            let guild_option = insert_new_guild(&guild_collection_option, guild_id).await;
+                            let guild_option =
+                                insert_new_guild(&guild_collection_option, guild_id).await;
                             return guild_option;
                         }
                     }
-                },
+                }
                 Err(why) => {
                     debug!("guild option result is err");
                     error!("{}", why);
                     return None;
                 }
             }
-        },
+        }
         None => {
             debug!("guild collection option is none");
             return None;
@@ -343,15 +359,20 @@ pub async fn pop_guild_queue(guild_id: String) -> Option<Guild> {
 /// sets a guild's joined to channel status as well as a guild's joined channel id
 ///
 /// ### arguments
-/// 
+///
 /// * `guild_id` - the discord issued id for the guild
-/// * `channel_id_option` - some string discord channel id or none
-/// 
-/// ### returns 
-/// 
+/// * `voice_channel_id_option` - some string discord channel id or none
+/// * `message_channel_id_option` - some string discord channel id or none
+///
+/// ### returns
+///
 /// some guild or none
-/// 
-pub async fn set_joined_to_channel(guild_id: String, voice_channel_id_option: Option<String>, message_channel_id_option: Option<String>) -> Option<Guild> {
+///
+pub async fn set_joined_to_channel(
+    guild_id: String,
+    voice_channel_id_option: Option<String>,
+    message_channel_id_option: Option<String>,
+) -> Option<Guild> {
     let guild_collection_option = get_guild_collection().await;
     match &guild_collection_option {
         Some(guild_collection) => {
@@ -365,17 +386,19 @@ pub async fn set_joined_to_channel(guild_id: String, voice_channel_id_option: Op
                         Some(message_channel_id) => {
                             debug!("message channel id option is some");
                             update = doc! { "$set": { "joined_to_voice": true, "voice_channel_id": voice_channel_id, "message_channel_id": message_channel_id }};
-                        },
+                        }
                         None => {
                             debug!("message channel id option is none");
                         }
                     }
-                },
+                }
                 None => {
                     debug!("voice channel id option is none");
                 }
             }
-            let guild_option_result = guild_collection.find_one_and_update(filter, update, None).await;
+            let guild_option_result = guild_collection
+                .find_one_and_update(filter, update, None)
+                .await;
             match guild_option_result {
                 Ok(guild_option) => {
                     debug!("guild option result is ok");
@@ -383,21 +406,22 @@ pub async fn set_joined_to_channel(guild_id: String, voice_channel_id_option: Op
                         Some(guild) => {
                             debug!("guild option is some");
                             return Some(guild);
-                        }, 
+                        }
                         None => {
                             debug!("guild option is none");
-                            let guild_option = insert_new_guild(&guild_collection_option, guild_id).await;
+                            let guild_option =
+                                insert_new_guild(&guild_collection_option, guild_id).await;
                             return guild_option;
                         }
                     }
-                },
+                }
                 Err(why) => {
                     debug!("guild option result is err");
                     println!("{}", why);
                     return None;
                 }
             }
-        },
+        }
         None => {
             debug!("guild collection option is none");
             return None;
@@ -405,17 +429,17 @@ pub async fn set_joined_to_channel(guild_id: String, voice_channel_id_option: Op
     }
 }
 
-/// gets guilds that are found to be joined to channel in mongo
+/// gets the ids of the guilds that are found to be joined to channel in mongo
 ///
 /// ### arguments
-/// 
+///
 /// * `none` - none
-/// 
-/// ### returns 
-/// 
+///
+/// ### returns
+///
 /// some vector of string or none
-/// 
-pub async fn get_guilds_joined_to_channel() -> Option<Vec<String>> {
+///
+pub async fn get_guild_ids_joined_to_channel() -> Option<Vec<String>> {
     let guild_collection_option = get_guild_collection().await;
     match guild_collection_option {
         Some(guild_collection) => {
@@ -427,7 +451,10 @@ pub async fn get_guilds_joined_to_channel() -> Option<Vec<String>> {
                     debug!("{}", "cursor result is ok");
                     let mut guilds: Vec<String> = vec![];
                     while let Ok(cursor_is_open) = cursor.advance().await {
-                        debug!("cursor result is ok and it is {} that the cursor is open", cursor_is_open);
+                        debug!(
+                            "cursor result is ok and it is {} that the cursor is open",
+                            cursor_is_open
+                        );
                         if !cursor_is_open {
                             break;
                         }
@@ -437,7 +464,7 @@ pub async fn get_guilds_joined_to_channel() -> Option<Vec<String>> {
                                 Ok(guild) => {
                                     debug!("{}", "guild result is ok");
                                     guilds.push(guild.id);
-                                },
+                                }
                                 Err(why) => {
                                     debug!("{}", "guild result is err");
                                     error!("{}", why)
@@ -446,14 +473,180 @@ pub async fn get_guilds_joined_to_channel() -> Option<Vec<String>> {
                         }
                     }
                     return Some(guilds);
-                },
+                }
                 Err(why) => {
                     debug!("{}", "cursor result is err");
                     error!("{}", why);
                     return None;
                 }
             }
-        },
+        }
+        None => {
+            debug!("{}", "guild collection is none");
+            return None;
+        }
+    }
+}
+
+/// counts guilds that are found to be joined to channel in mongo
+///
+/// ### arguments
+///
+/// * `none` - none
+///
+/// ### returns
+///
+/// some vector of string or none
+///
+pub async fn count_guilds_joined_to_channel() -> Option<u64> {
+    let guild_collection_option = get_guild_collection().await;
+    match guild_collection_option {
+        Some(guild_collection) => {
+            debug!("{}", "guild collection is some");
+            let filter = doc! { "joined_to_voice": true };
+            let count_result = guild_collection.count_documents(filter, None).await;
+            match count_result {
+                Ok(count) => {
+                    debug!("{}", "count result is ok");
+                    return Some(count);
+                }
+                Err(why) => {
+                    debug!("{}", "count result is err");
+                    error!("{}", why);
+                    return None;
+                }
+            }
+        }
+        None => {
+            debug!("{}", "guild collection is none");
+            return None;
+        }
+    }
+}
+
+/// counts subscribed guilds that are found to be joined to channel in mongo
+///
+/// ### arguments
+///
+/// * `none` - none
+///
+/// ### returns
+///
+/// some vector of string or none
+///
+pub async fn count_subscribed_guilds_joined_to_channel() -> Option<u64> {
+    let guild_collection_option = get_guild_collection().await;
+    match guild_collection_option {
+        Some(guild_collection) => {
+            debug!("{}", "guild collection is some");
+            let filter =
+                doc! { "expiration": { "$gt": Utc::now().to_string() }, "joined_to_voice": true };
+            let count_result = guild_collection.count_documents(filter, None).await;
+            match count_result {
+                Ok(count) => {
+                    debug!("{}", "count result is ok");
+                    return Some(count);
+                }
+                Err(why) => {
+                    debug!("{}", "count result is err");
+                    error!("{}", why);
+                    return None;
+                }
+            }
+        }
+        None => {
+            debug!("{}", "guild collection is none");
+            return None;
+        }
+    }
+}
+
+/// counts free guilds that are found to be joined to channel in mongo
+///
+/// ### arguments
+///
+/// * `none` - none
+///
+/// ### returns
+///
+/// some vector of string or none
+///
+pub async fn count_free_guilds_joined_to_channel() -> Option<u64> {
+    let guild_collection_option = get_guild_collection().await;
+    match guild_collection_option {
+        Some(guild_collection) => {
+            debug!("{}", "guild collection is some");
+            let filter =
+                doc! { "expiration": { "$lt": Utc::now().to_string() }, "joined_to_voice": true };
+            let count_result = guild_collection.count_documents(filter, None).await;
+            match count_result {
+                Ok(count) => {
+                    debug!("{}", "count result is ok");
+                    return Some(count);
+                }
+                Err(why) => {
+                    debug!("{}", "count result is err");
+                    error!("{}", why);
+                    return None;
+                }
+            }
+        }
+        None => {
+            debug!("{}", "guild collection is none");
+            return None;
+        }
+    }
+}
+
+/// gets the first free guild that is found to be joined to channel in mongo
+///
+/// ### arguments
+///
+/// * `none` - none
+///
+/// ### returns
+///
+/// some vector of string or none
+///
+pub async fn get_first_free_guild_joined_to_channel() -> Option<GuildId> {
+    let guild_collection_option = get_guild_collection().await;
+    match guild_collection_option {
+        Some(guild_collection) => {
+            debug!("{}", "guild collection is some");
+            let filter =
+                doc! { "expiration": { "$lt": Utc::now().to_string() }, "joined_to_voice": true };
+            let guild_option_result = guild_collection.find_one(filter, None).await;
+            match guild_option_result {
+                Ok(guild_option) => {
+                    debug!("{}", "guild option result is ok");
+                    match guild_option {
+                        Some(guild) => {
+                            debug!("guild option is some");
+                            match guild.id.parse::<u64>() {
+                                Ok(guild_id) => {
+                                    debug!("guild id result is ok");
+                                    return Some(GuildId(guild_id));
+                                }
+                                Err(why) => {
+                                    debug!("guild id result is err");
+                                    error!("{}", why);
+                                    return None;
+                                }
+                            };
+                        }
+                        None => {
+                            debug!("guild option is none");
+                            return None;
+                        }
+                    }
+                }
+                Err(why) => {
+                    debug!("{}", "guild option result is err");
+                    error!("{}", why);
+                    return None;
+                }
+            }
+        }
         None => {
             debug!("{}", "guild collection is none");
             return None;
@@ -464,13 +657,13 @@ pub async fn get_guilds_joined_to_channel() -> Option<Vec<String>> {
 /// gets a guild queue in mongo given a guild id
 ///
 /// ### arguments
-/// 
+///
 /// * `guild_id` - the discord issued id for the guild
-/// 
-/// ### returns 
-/// 
+///
+/// ### returns
+///
 /// some vector of string track urls
-/// 
+///
 pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
     let guild_collection_option = get_guild_collection().await;
     match &guild_collection_option {
@@ -484,22 +677,22 @@ pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
                     match guild_option {
                         Some(guild) => {
                             debug!("guild option is some");
-                            return Some(guild.queue)
-                        }, 
+                            return Some(guild.queue);
+                        }
                         None => {
                             debug!("guild option is none");
                             insert_new_guild(&guild_collection_option, guild_id).await;
                             return None;
                         }
                     }
-                },
+                }
                 Err(why) => {
                     debug!("guild option result is err");
                     error!("{}", why);
                     return None;
                 }
             }
-        },
+        }
         None => {
             debug!("guild collection option is none");
             return None;
@@ -507,26 +700,24 @@ pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
     }
 }
 
-
 /// gets a guild's subscription status from mongo given a guild id
 ///
 /// ### arguments
-/// 
+///
 /// * `guild_id` - the discord issued id for the guild
-/// 
-/// ### returns 
-/// 
+///
+/// ### returns
+///
 /// some bool or none
-/// 
+///
 pub async fn get_guild_is_subscribed(guild_id: String) -> Option<bool> {
     let guild_option = get_guild_document(guild_id).await;
     match guild_option {
         Some(guild) => {
             debug!("guild option is some");
             return Some(guild.is_subscribed());
-        },
-        None =>
-        {
+        }
+        None => {
             debug!("guild option is none");
             return None;
         }
@@ -536,25 +727,23 @@ pub async fn get_guild_is_subscribed(guild_id: String) -> Option<bool> {
 /// gets a guild's expiration from mongo given a guild id
 ///
 /// ### arguments
-/// 
+///
 /// * `guild_id` - the discord issued id for the guild
-/// 
-/// ### returns 
-/// 
+///
+/// ### returns
+///
 /// some datetime utc or none
-/// 
+///
 pub async fn get_guild_expiration(guild_id: String) -> Option<DateTime<Utc>> {
     let guild_option = get_guild_document(guild_id).await;
     match guild_option {
         Some(guild) => {
             debug!("guild option is some");
             return Some(guild.expiration);
-        },
-        None =>
-        {
+        }
+        None => {
             debug!("guild option is none");
             return None;
         }
     }
 }
-
