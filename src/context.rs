@@ -166,51 +166,86 @@ pub async fn context_rejoin_to_voice_channel(
     }
 }
 
+/// gets a guild document from mongo given a guild id
+/// and then enqueues each url found in the vector of string queue field
+///
+/// ### arguments
+///
+/// * `ctx` - serenity client context reference
+/// * `guild_id` - serenity model id guild_id
+///
+/// ### returns
+///
+/// some atomically reference counted songbird or none
+///
 pub async fn context_repopulate_guild_queue(
     ctx: &Context,
     guild_id: GuildId,
 ) -> Option<Arc<Songbird>> {
-    let guild_option = get_guild_document(guild_id.to_string()).await;
-    match guild_option {
+    match get_guild_document(guild_id.to_string()).await {
         Some(guild) => {
             debug!("guild option is some");
-            let voice_channel_id = ChannelId(guild.voice_channel_id.parse::<u64>().unwrap());
-            let message_channel_id = ChannelId(guild.message_channel_id.parse::<u64>().unwrap());
-            match context_rejoin_to_voice_channel(
-                ctx,
-                guild_id,
-                voice_channel_id,
-                message_channel_id,
-            )
-            .await
-            {
-                Some(songbird_arc) => {
-                    debug!("songbird arc is some");
-                    if let Some(handler_lock) = songbird_arc.get(guild_id) {
-                        let mut handler = handler_lock.lock().await;
-                        for url in guild.queue {
-                            // Here, we use lazy restartable sources to make sure that we don't pay
-                            // for decoding, playback on tracks which aren't actually live yet.
-                            match Restartable::ytdl(url, true).await {
-                                Ok(source) => {
-                                    debug!("ytdl is ok");
-                                    handler.enqueue_source(source.into());
+            match guild.voice_channel_id.parse::<u64>() {
+                Ok(voice_channel_id) => {
+                    debug!("voice channel id result is ok");
+                    match guild.message_channel_id.parse::<u64>() {
+                        Ok(message_channel_id) => {
+                            debug!("message channel id result is ok");
+                            match context_rejoin_to_voice_channel(
+                                ctx,
+                                guild_id,
+                                ChannelId(voice_channel_id),
+                                ChannelId(message_channel_id),
+                            )
+                            .await
+                            {
+                                Some(songbird_arc) => {
+                                    debug!("songbird arc is some");
+                                    match songbird_arc.get(guild_id) {
+                                        Some(handle_lock) => {
+                                            debug!("handle lock option is some");
+                                            let mut handle = handle_lock.lock().await;
+                                            for url in guild.queue {
+                                                // Here, we use lazy restartable sources to make sure that we don't pay
+                                                // for decoding, playback on tracks which aren't actually live yet.
+                                                match Restartable::ytdl(url, true).await {
+                                                    Ok(source) => {
+                                                        debug!("ytdl is ok");
+                                                        handle.enqueue_source(source.into());
+                                                    }
+                                                    Err(why) => {
+                                                        debug!("ytdl is err");
+                                                        error!("{}", why);
+                                                    }
+                                                };
+                                            }
+                                            return Some(songbird_arc);
+                                        }
+                                        None => {
+                                            debug!("handle lock option is none");
+                                            return None;
+                                        }
+                                    }
                                 }
-                                Err(why) => {
-                                    debug!("ytdl is err");
-                                    error!("{}", why);
-                                    println!("Err starting source: {:?}", why);
+                                None => {
+                                    debug!("songbird arc is none");
+                                    return None;
                                 }
-                            };
+                            }
                         }
-                    }
-                    return Some(songbird_arc);
+                        Err(why) => {
+                            debug!("message channel id result is err");
+                            error!("{}", why);
+                            return None;
+                        }
+                    };
                 }
-                None => {
-                    debug!("songbird arc is none");
+                Err(why) => {
+                    debug!("voice channel id option is err");
+                    error!("{}", why);
                     return None;
                 }
-            }
+            };
         }
         None => {
             debug!("guild option is none");
