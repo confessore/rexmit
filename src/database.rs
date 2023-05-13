@@ -429,7 +429,7 @@ pub async fn set_joined_to_channel(
     }
 }
 
-/// gets guilds that are found to be joined to channel in mongo
+/// gets the ids of the guilds that are found to be joined to channel in mongo
 ///
 /// ### arguments
 ///
@@ -439,7 +439,7 @@ pub async fn set_joined_to_channel(
 ///
 /// some vector of string or none
 ///
-pub async fn get_guilds_joined_to_channel() -> Option<Vec<String>> {
+pub async fn get_guild_ids_joined_to_channel() -> Option<Vec<String>> {
     let guild_collection_option = get_guild_collection().await;
     match guild_collection_option {
         Some(guild_collection) => {

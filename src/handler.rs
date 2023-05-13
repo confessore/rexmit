@@ -4,7 +4,7 @@ use crate::{
     database::{
         clear_guild_queue, count_free_guilds_joined_to_channel, count_guilds_joined_to_channel,
         count_subscribed_guilds_joined_to_channel, get_first_free_guild_joined_to_channel,
-        get_guilds_joined_to_channel, pop_guild_queue, set_joined_to_channel,
+        get_guild_ids_joined_to_channel, pop_guild_queue, set_joined_to_channel, get_guild_is_subscribed,
     },
 };
 use serenity::{
@@ -18,7 +18,7 @@ use serenity::{
 };
 use songbird::{Event, EventContext, EventHandler as VoiceEventHandler, Songbird};
 use std::sync::Arc;
-use tracing::{debug, info};
+use tracing::{debug, info, error};
 
 pub struct Handler;
 
@@ -71,19 +71,43 @@ impl EventHandler for Handler {
         */
 
         //checking guild queues, could use better naming
-        /*let joined_guilds_option = get_guilds_joined_to_channel().await;
-        if joined_guilds_option.is_some() {
-            let joined_guilds = joined_guilds_option.unwrap();
-            for joined_guild in joined_guilds {
-                let subscribed_option = get_guild_is_subscribed(joined_guild.to_string()).await;
-                match subscribed_option {
-                    Some(subscribed) => {
-                        info!("guild is subscribed: {:?}", subscribed);
-                    },
-                    None => {}
+        match get_guild_ids_joined_to_channel().await {
+            Some(guild_ids) => {
+                debug!("guild ids option is some");
+                for guild_id in guild_ids {
+                    match get_guild_is_subscribed(guild_id.to_string()).await {
+                        Some(guild_is_subscribed) => {
+                            debug!("guild_is_subscribed option is some");
+                            if guild_is_subscribed {
+                                match guild_id.parse::<u64>() {
+                                    Ok(guild_id) => {
+                                        debug!("guild id result is ok");
+                                        match context_repopulate_guild_queue(&ctx, GuildId(guild_id)).await {
+                                            Some(songbird_arc) => {
+                                                debug!("songbird arc option is some");
+                                            }
+                                            None => {
+                                                debug!("songbird arc option is none");
+                                            }
+                                        }
+                                    }
+                                    Err(why) => {
+                                        debug!("guild id result is err");
+                                        error!("{}", why);
+                                    }
+                                }
+                            }
+                        },
+                        None => {
+                            debug!("guild_is_subscribed option is none");
+                        }
+                    }
                 }
             }
-        }*/
+            None => {
+                debug!("guild ids option is none");
+            }
+        }
     }
 
     /*async fn voice_state_update(&self, _ctx: Context, _old: Option<VoiceState>, _new: VoiceState) {
