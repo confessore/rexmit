@@ -4,7 +4,8 @@ use crate::{
     database::{
         clear_guild_queue, count_free_guilds_joined_to_channel, count_guilds_joined_to_channel,
         count_subscribed_guilds_joined_to_channel, get_first_free_guild_joined_to_channel,
-        get_guild_ids_joined_to_channel, pop_guild_queue, set_joined_to_channel, get_guild_is_subscribed,
+        get_guild_ids_joined_to_channel, get_guild_is_subscribed, pop_guild_queue,
+        set_joined_to_channel,
     },
 };
 use serenity::{
@@ -18,7 +19,7 @@ use serenity::{
 };
 use songbird::{Event, EventContext, EventHandler as VoiceEventHandler, Songbird};
 use std::sync::Arc;
-use tracing::{debug, info, error};
+use tracing::{debug, error, info};
 
 pub struct Handler;
 
@@ -82,7 +83,12 @@ impl EventHandler for Handler {
                                 match guild_id.parse::<u64>() {
                                     Ok(guild_id) => {
                                         debug!("guild id result is ok");
-                                        match context_repopulate_guild_queue(&ctx, GuildId(guild_id)).await {
+                                        match context_repopulate_guild_queue(
+                                            &ctx,
+                                            GuildId(guild_id),
+                                        )
+                                        .await
+                                        {
                                             Some(songbird_arc) => {
                                                 debug!("songbird arc option is some");
                                             }
@@ -97,7 +103,7 @@ impl EventHandler for Handler {
                                     }
                                 }
                             }
-                        },
+                        }
                         None => {
                             debug!("guild_is_subscribed option is none");
                         }
