@@ -21,7 +21,11 @@ RUN cargo build --release
 
 
 FROM rexmit-base AS rexmit-production
+ARG DEBUG
+ENV DEBUG=$DEBUG
 ARG DISCORD_TOKEN
 ENV DISCORD_TOKEN=$DISCORD_TOKEN
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
 COPY --from=rexmit-builder /usr/src/rexmit/target/release/rexmit /usr/local/bin/rexmit
 CMD ["rexmit"]
