@@ -1,4 +1,4 @@
-use std::{error::Error, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use serenity::{
     model::prelude::{ChannelId, Guild, GuildId, Message, PartialGuild},
@@ -8,8 +8,7 @@ use songbird::{input::Restartable, Event, Songbird, TrackEvent};
 use tracing::{debug, error};
 
 use crate::{
-    command::check_msg,
-    database::{get_guild_document, get_guild_queue, set_joined_to_channel},
+    database::{get_guild_document, set_joined_to_channel},
     handler::{Periodic, TrackEndNotifier},
 };
 

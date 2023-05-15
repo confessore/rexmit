@@ -1,9 +1,8 @@
 use crate::{
     command::check_msg,
-    context::{context_boot_guild, context_repopulate_guild_queue},
+    context::{context_repopulate_guild_queue},
     database::{
-        clear_guild_queue, count_free_guilds_joined_to_channel, count_guilds_joined_to_channel,
-        count_subscribed_guilds_joined_to_channel, get_first_free_guild_joined_to_channel,
+        clear_guild_queue,
         get_guild_ids_joined_to_channel, get_guild_is_subscribed, pop_guild_queue,
         set_joined_to_channel,
     },
@@ -14,7 +13,7 @@ use serenity::{
     http::Http,
     model::{
         gateway::Ready,
-        prelude::{Activity, ChannelId, GuildId},
+        prelude::{Activity, ChannelId, GuildId}, voice::VoiceState,
     },
 };
 use songbird::{Event, EventContext, EventHandler as VoiceEventHandler, Songbird};
@@ -89,7 +88,7 @@ impl EventHandler for Handler {
                                         )
                                         .await
                                         {
-                                            Some(songbird_arc) => {
+                                            Some(_songbird_arc) => {
                                                 debug!("songbird arc option is some");
                                             }
                                             None => {
@@ -114,6 +113,37 @@ impl EventHandler for Handler {
                 debug!("guild ids option is none");
             }
         }
+    }
+
+    async fn voice_state_update(&self, _ctx: Context, old: Option<VoiceState>, _new: VoiceState) {
+        match old {
+            Some(voice_state) => {
+                if voice_state.user_id == _ctx.cache.current_user().id {
+                    let old_voice_channel_id = voice_state.channel_id;
+                    let new_voice_channel_id = _new.channel_id;
+                    info!("rexmit was in {:?}", old_voice_channel_id);
+                    info!("rexmit is now in {:?}", new_voice_channel_id);
+                }
+            }
+            None => {}
+        };
+        /*let channel_result = _ctx.http.get_channel(_new.channel_id.unwrap().into()).await;
+        match channel_result.unwrap().guild() {
+            Some(guild_channel) => {
+                let members_result = guild_channel.members(&_ctx.cache).await;
+                match members_result {
+                    Ok(members) => {
+                        println!("{}", members.len())
+                    },
+                    Err(why) => {
+                        println!("{}", why);
+                    }
+                }
+            },
+            None => {
+                println!("{}", "no guild")
+            }
+        };*/
     }
 
     /*async fn voice_state_update(&self, _ctx: Context, _old: Option<VoiceState>, _new: VoiceState) {
