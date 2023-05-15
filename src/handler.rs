@@ -123,6 +123,9 @@ impl EventHandler for Handler {
                     let new_voice_channel_id = _new.channel_id;
                     info!("rexmit was in {:?}", old_voice_channel_id);
                     info!("rexmit is now in {:?}", new_voice_channel_id);
+                    // idea being to update the database with new voice channel id
+                    // as well as the songbird manager
+                    // maybe it makes sense to remove the songbird manager and then requeue everything on a new songbird manager
                 }
             }
             None => {}

@@ -747,3 +747,47 @@ pub async fn get_guild_expiration(guild_id: String) -> Option<DateTime<Utc>> {
         }
     }
 }
+
+pub async fn slot_is_available(guild_id: String) -> Option<bool> {
+    match count_guilds_joined_to_channel().await {
+        Some(used_slots) => {
+            match env::var("MAX_SLOTS").expect("Expected a MAX_SLOTS in the environment").parse::<u64>() {
+                Ok(max_slots) => {
+                    if used_slots < max_slots {
+                        return Some(true);
+                    } else {
+                        match get_guild_is_subscribed(guild_id).await {
+                            Some(guild_is_subscribed) => {
+                                if guild_is_subscribed {
+                                    match count_free_guilds_joined_to_channel().await {
+                                        Some(used_free_slots) => {
+                                            if used_free_slots > 0 {
+                                                return Some(true);
+                                            } else {
+                                                return Some(false);
+                                            }
+                                        }
+                                        None => {
+                                            return None;
+                                        }
+                                    }
+                                } else {
+                                    return Some(false);
+                                }
+                            }
+                            None => {
+                                return None;
+                            }
+                        }
+                    }
+                }
+                Err(why) => {
+                    return None;
+                }
+            }
+        }
+        None => {
+            return None;
+        }
+    }
+}
