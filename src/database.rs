@@ -751,43 +751,58 @@ pub async fn get_guild_expiration(guild_id: String) -> Option<DateTime<Utc>> {
 pub async fn slot_is_available(guild_id: String) -> Option<bool> {
     match count_guilds_joined_to_channel().await {
         Some(used_slots) => {
+            debug!("count guilds joined to channel is some");
             match env::var("MAX_SLOTS").expect("Expected a MAX_SLOTS in the environment").parse::<u64>() {
                 Ok(max_slots) => {
+                    debug!("max slots parse is ok");
                     if used_slots < max_slots {
+                        // connect
                         return Some(true);
                     } else {
                         match get_guild_is_subscribed(guild_id).await {
                             Some(guild_is_subscribed) => {
+                                debug!("get guild is subscribed is some");
                                 if guild_is_subscribed {
                                     match count_free_guilds_joined_to_channel().await {
                                         Some(used_free_slots) => {
+                                            debug!("count free guilds joined to channel is some");
                                             if used_free_slots > 0 {
+                                                // boot the free slot and connect subscriber
                                                 return Some(true);
                                             } else {
+                                                // take to the discord channel with a pitchfork
                                                 return Some(false);
                                             }
                                         }
                                         None => {
+                                            debug!("count free guilds joined to channel is none");
                                             return None;
                                         }
                                     }
                                 } else {
+                                    // first come first serve, maybe make a reservation?
+                                    // post https link
                                     return Some(false);
                                 }
                             }
                             None => {
+                                debug!("get guild is subscribed is none");
                                 return None;
                             }
                         }
                     }
                 }
                 Err(why) => {
+                    debug!("max slots parse is err");
+                    error!("{}", why);
                     return None;
                 }
             }
         }
         None => {
+            debug!("count guilds joined to channel is none");
             return None;
         }
     }
 }
+
