@@ -2,10 +2,10 @@ use std::env;
 
 use chrono::{DateTime, Utc};
 use mongodb::{bson::doc, Client as MongoClient, Collection, Database};
-use serenity::model::prelude::GuildId;
+use serenity::{model::prelude::{GuildId, ChannelId}, prelude::Context};
 use tracing::{debug, error};
 
-use crate::models::guild::Guild;
+use crate::{models::guild::Guild, command::check_msg};
 
 /// gets the rexmit database from mongo
 ///
@@ -26,7 +26,13 @@ pub async fn get_rexmit_database() -> Option<Database> {
             match client_result {
                 Ok(client) => {
                     debug!("client result is ok");
-                    let database = client.database("rexmit");
+                    // storm better way to account for debug environment variable
+                    let debug = env::var("DEBUG").expect("Expected a DEBUG == to 1 or 0 in the environment");
+                    let mut database_name = "rexmit";
+                    if debug == "1" {
+                        database_name = "rexmit-dev"
+                    }
+                    let database = client.database(database_name);
                     return Some(database);
                 }
                 Err(why) => {
@@ -748,7 +754,7 @@ pub async fn get_guild_expiration(guild_id: String) -> Option<DateTime<Utc>> {
     }
 }
 
-pub async fn slot_is_available(guild_id: String) -> Option<bool> {
+pub async fn slot_is_available(ctx: &Context, guild_id: String) -> Option<bool> {
     match count_guilds_joined_to_channel().await {
         Some(used_slots) => {
             debug!("count guilds joined to channel is some");
@@ -760,6 +766,7 @@ pub async fn slot_is_available(guild_id: String) -> Option<bool> {
                     debug!("max slots parse is ok");
                     if used_slots < max_slots {
                         // connect
+
                         return Some(true);
                     } else {
                         match get_guild_has_reservation(guild_id).await {
@@ -770,11 +777,39 @@ pub async fn slot_is_available(guild_id: String) -> Option<bool> {
                                         Some(used_free_slots) => {
                                             debug!("count free guilds joined to channel is some");
                                             if used_free_slots > 0 {
-                                                // boot the free user and connect the guild with a reservation
-                                                //
-                                                //
-                                                //
-                                                return Some(true);
+                                                match get_first_free_guild_joined_to_channel().await {
+                                                    Some(guild_id) => {
+                                                        debug!("get_first_free_guild_joined_to_channel is some");
+                                                        match get_guild_document(guild_id.to_string()).await {
+                                                            Some(guild) => {
+                                                                debug!("get_guild_document is some");
+                                                                match guild.message_channel_id.parse::<u64>() {
+                                                                    Ok(message_channel_id) => {
+                                                                        debug!("message_channel_id parse is ok");
+                                                                        // boot the free user and connect the guild with a reservation
+
+
+                                                                        check_msg(ChannelId(message_channel_id).say(&ctx.http, "retreated to attend to a reserved guild").await);
+                                                                        return Some(true);
+                                                                    }
+                                                                    Err(why) => {
+                                                                        debug!("message_channel_id parse is err");
+                                                                        error!("{}", why);
+                                                                        return None;
+                                                                    }
+                                                                }
+                                                            }
+                                                            None => {
+                                                                debug!("get_guild_document is none");
+                                                                return None;
+                                                            }
+                                                        }
+                                                    }
+                                                    None => {
+                                                        debug!("get_first_free_guild_joined_to_channel is none");
+                                                        return None;
+                                                    }
+                                                }
                                             } else {
                                                 // take to the discord channel with a pitchfork
                                                 // https://discord.gg/95eUjKqT7e

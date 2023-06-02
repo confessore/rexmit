@@ -12,6 +12,7 @@ pub mod models;
 
 #[tokio::main]
 async fn main() {
+    // storm better way to account for debug environment variables
     let debug = env::var("DEBUG").expect("Expected a DEBUG == to 1 or 0 in the environment");
     let mut log_level = Level::INFO;
     if debug == "1" {
