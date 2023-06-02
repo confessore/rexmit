@@ -27,7 +27,7 @@ pub async fn context_join_to_voice_channel(
     msg: &Message,
     guild: &Guild,
 ) -> Option<bool> {
-    let songbird_arc_option = songbird::get(ctx).await;
+    let songbird_arc_option = songbird::get(&ctx).await;
     let songbird_arc = match songbird_arc_option {
         Some(songbird_arc) => {
             debug!("songbird arc is some");
@@ -94,7 +94,7 @@ pub async fn context_join_to_voice_channel(
 }
 
 pub async fn context_boot_guild(ctx: &Context, guild_id: GuildId) {
-    let songbird_arc_option = songbird::get(ctx).await;
+    let songbird_arc_option = songbird::get(&ctx).await;
     match songbird_arc_option {
         Some(songbird_arc) => {
             debug!("songbird arc is some");
@@ -121,7 +121,7 @@ pub async fn context_rejoin_to_voice_channel(
     voice_channel_id: ChannelId,
     message_channel_id: ChannelId,
 ) -> Option<Arc<Songbird>> {
-    let songbird_arc_option = songbird::get(ctx).await;
+    let songbird_arc_option = songbird::get(&ctx).await;
     match songbird_arc_option {
         Some(songbird_arc) => {
             debug!("songbird arc option is some");

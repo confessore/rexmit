@@ -32,7 +32,7 @@ struct General;
 
 #[command]
 async fn d(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return deafen(ctx, msg, _args).await;
+    return deafen(&ctx, &msg, _args).await;
 }
 
 #[command]
@@ -99,11 +99,11 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
     let guild_has_reservation = get_guild_has_reservation(guild.id.to_string()).await;
     match guild_has_reservation {
         Some(reserved) => {
-            debug!("guild_has_rservation option is some");
+            debug!("guild_has_reservation option is some");
             if reserved {
                 let log = "guild has reservation";
                 debug!(log);
-                match context_join_to_voice_channel(ctx, msg, &guild).await {
+                match context_join_to_voice_channel(&ctx, &msg, &guild).await {
                     Some(_success) => {
                         debug!("context join to voice channel is some");
                         return Ok(());
@@ -124,7 +124,7 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
         }
         None => {
             debug!("guild_has_reservation option is none");
-            match context_join_to_voice_channel(ctx, msg, &guild).await {
+            match context_join_to_voice_channel(&ctx, &msg, &guild).await {
                 Some(_success) => {
                     debug!("context join to voice channel is some");
                     return Ok(());
@@ -143,7 +143,7 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn l(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return leave(ctx, msg, _args).await;
+    return leave(&ctx, &msg, _args).await;
 }
 
 #[command]
@@ -181,7 +181,7 @@ async fn leave(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn m(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return mute(ctx, msg, _args).await;
+    return mute(&ctx, &msg, _args).await;
 }
 
 #[command]
@@ -226,7 +226,7 @@ async fn mute(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn p(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return ping(ctx, msg, _args).await;
+    return ping(&ctx, &msg, _args).await;
 }
 
 #[command]
@@ -327,7 +327,7 @@ async fn play_fade(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
 #[command]
 #[only_in(guilds)]
 async fn q(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    return queue(ctx, msg, args).await;
+    return queue(&ctx, &msg, args).await;
 }
 
 #[command]
@@ -433,7 +433,7 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn s(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return skip(ctx, msg, _args).await;
+    return skip(&ctx, &msg, _args).await;
 }
 
 #[command]
@@ -474,13 +474,13 @@ async fn skip(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn c(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return stop(ctx, msg, _args).await;
+    return stop(&ctx, &msg, _args).await;
 }
 
 #[command]
 #[only_in(guilds)]
 async fn clear(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return stop(ctx, msg, _args).await;
+    return stop(&ctx, &msg, _args).await;
 }
 
 #[command]
@@ -521,7 +521,7 @@ async fn stop(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn ud(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return undeafen(ctx, msg, _args).await;
+    return undeafen(&ctx, &msg, _args).await;
 }
 
 #[command]
@@ -560,7 +560,7 @@ async fn undeafen(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn um(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return unmute(ctx, msg, _args).await;
+    return unmute(&ctx, &msg, _args).await;
 }
 
 #[command]
