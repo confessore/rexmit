@@ -524,7 +524,7 @@ pub async fn count_guilds_joined_to_channel() -> Option<u64> {
     }
 }
 
-/// counts subscribed guilds that are found to be joined to channel in mongo
+/// counts guilds with a reservation that are found to be joined to channel in mongo
 ///
 /// ### arguments
 ///
@@ -534,7 +534,7 @@ pub async fn count_guilds_joined_to_channel() -> Option<u64> {
 ///
 /// some vector of string or none
 ///
-pub async fn count_subscribed_guilds_joined_to_channel() -> Option<u64> {
+pub async fn count_guilds_with_a_reservation_joined_to_channel() -> Option<u64> {
     let guild_collection_option = get_guild_collection().await;
     match guild_collection_option {
         Some(guild_collection) => {
@@ -700,7 +700,7 @@ pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
     }
 }
 
-/// gets a guild's subscription status from mongo given a guild id
+/// gets a guild's reservation status from mongo given a guild id
 ///
 /// ### arguments
 ///
@@ -710,12 +710,12 @@ pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
 ///
 /// some bool or none
 ///
-pub async fn get_guild_is_subscribed(guild_id: String) -> Option<bool> {
+pub async fn get_guild_has_reservation(guild_id: String) -> Option<bool> {
     let guild_option = get_guild_document(guild_id).await;
     match guild_option {
         Some(guild) => {
             debug!("guild option is some");
-            return Some(guild.is_subscribed());
+            return Some(guild.has_reservation());
         }
         None => {
             debug!("guild option is none");
@@ -752,25 +752,34 @@ pub async fn slot_is_available(guild_id: String) -> Option<bool> {
     match count_guilds_joined_to_channel().await {
         Some(used_slots) => {
             debug!("count guilds joined to channel is some");
-            match env::var("MAX_SLOTS").expect("Expected a MAX_SLOTS in the environment").parse::<u64>() {
+            match env::var("MAX_SLOTS")
+                .expect("Expected a MAX_SLOTS in the environment")
+                .parse::<u64>()
+            {
                 Ok(max_slots) => {
                     debug!("max slots parse is ok");
                     if used_slots < max_slots {
                         // connect
                         return Some(true);
                     } else {
-                        match get_guild_is_subscribed(guild_id).await {
-                            Some(guild_is_subscribed) => {
-                                debug!("get guild is subscribed is some");
-                                if guild_is_subscribed {
+                        match get_guild_has_reservation(guild_id).await {
+                            Some(guild_has_reservation) => {
+                                debug!("get_guild_has_reservation is some");
+                                if guild_has_reservation {
                                     match count_free_guilds_joined_to_channel().await {
                                         Some(used_free_slots) => {
                                             debug!("count free guilds joined to channel is some");
                                             if used_free_slots > 0 {
-                                                // boot the free slot and connect subscriber
+                                                // boot the free user and connect the guild with a reservation
+                                                //
+                                                //
+                                                //
                                                 return Some(true);
                                             } else {
                                                 // take to the discord channel with a pitchfork
+                                                // https://discord.gg/95eUjKqT7e
+                                                //
+                                                //
                                                 return Some(false);
                                             }
                                         }
@@ -782,11 +791,13 @@ pub async fn slot_is_available(guild_id: String) -> Option<bool> {
                                 } else {
                                     // first come first serve, maybe make a reservation?
                                     // post https link
+                                    //
+                                    //
                                     return Some(false);
                                 }
                             }
                             None => {
-                                debug!("get guild is subscribed is none");
+                                debug!("get_guild_has_reservation is none");
                                 return None;
                             }
                         }
@@ -805,4 +816,3 @@ pub async fn slot_is_available(guild_id: String) -> Option<bool> {
         }
     }
 }
-

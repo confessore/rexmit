@@ -1,10 +1,9 @@
 use crate::{
     command::check_msg,
-    context::{context_repopulate_guild_queue},
+    context::context_repopulate_guild_queue,
     database::{
-        clear_guild_queue,
-        get_guild_ids_joined_to_channel, get_guild_is_subscribed, pop_guild_queue,
-        set_joined_to_channel,
+        clear_guild_queue, get_guild_has_reservation, get_guild_ids_joined_to_channel,
+        pop_guild_queue, set_joined_to_channel,
     },
 };
 use serenity::{
@@ -13,7 +12,8 @@ use serenity::{
     http::Http,
     model::{
         gateway::Ready,
-        prelude::{Activity, ChannelId, GuildId}, voice::VoiceState,
+        prelude::{Activity, ChannelId, GuildId},
+        voice::VoiceState,
     },
 };
 use songbird::{Event, EventContext, EventHandler as VoiceEventHandler, Songbird};
@@ -75,10 +75,10 @@ impl EventHandler for Handler {
             Some(guild_ids) => {
                 debug!("guild ids option is some");
                 for guild_id in guild_ids {
-                    match get_guild_is_subscribed(guild_id.to_string()).await {
-                        Some(guild_is_subscribed) => {
-                            debug!("guild_is_subscribed option is some");
-                            if guild_is_subscribed {
+                    match get_guild_has_reservation(guild_id.to_string()).await {
+                        Some(guild_has_reservation) => {
+                            debug!("guild_has_reservation option is some");
+                            if guild_has_reservation {
                                 match guild_id.parse::<u64>() {
                                     Ok(guild_id) => {
                                         debug!("guild id result is ok");
@@ -104,7 +104,7 @@ impl EventHandler for Handler {
                             }
                         }
                         None => {
-                            debug!("guild_is_subscribed option is none");
+                            debug!("guild_has_reservation option is none");
                         }
                     }
                 }

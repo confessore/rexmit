@@ -18,7 +18,7 @@ use tracing::debug;
 use crate::{
     context::context_join_to_voice_channel,
     database::{
-        clear_guild_queue, get_guild_is_subscribed, set_guild_queue, set_joined_to_channel,
+        clear_guild_queue, get_guild_has_reservation, set_guild_queue, set_joined_to_channel,
     },
     handler::{SongEndNotifier, SongFader},
 };
@@ -81,7 +81,7 @@ async fn j(ctx: &Context, msg: &Message) -> CommandResult {
 
 /// joins the command issuer's voice channel
 /// without a database url, the join simply occurs
-/// with a database url, a subscription check is performed
+/// with a database url, a reservation check is performed
 ///
 /// ### arguments
 ///
@@ -96,12 +96,12 @@ async fn j(ctx: &Context, msg: &Message) -> CommandResult {
 #[only_in(guilds)]
 async fn join(ctx: &Context, msg: &Message) -> CommandResult {
     let guild = msg.guild(&ctx.cache).unwrap();
-    let subscribed_option = get_guild_is_subscribed(guild.id.to_string()).await;
-    match subscribed_option {
-        Some(subscribed) => {
-            debug!("subscribed option is some");
-            if subscribed {
-                let log = "guild is subscribed";
+    let guild_has_reservation = get_guild_has_reservation(guild.id.to_string()).await;
+    match guild_has_reservation {
+        Some(reserved) => {
+            debug!("guild_has_rservation option is some");
+            if reserved {
+                let log = "guild has reservation";
                 debug!(log);
                 match context_join_to_voice_channel(ctx, msg, &guild).await {
                     Some(_success) => {
@@ -116,14 +116,14 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                     }
                 }
             } else {
-                let log = "guild is not subscribed";
+                let log = "guild has no reservation";
                 debug!(log);
                 check_msg(msg.channel_id.say(&ctx.http, log).await);
                 return Err(CommandError::from(log));
             }
         }
         None => {
-            debug!("subscribed option is none");
+            debug!("guild_has_reservation option is none");
             match context_join_to_voice_channel(ctx, msg, &guild).await {
                 Some(_success) => {
                     debug!("context join to voice channel is some");
