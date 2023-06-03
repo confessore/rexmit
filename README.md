@@ -1,5 +1,8 @@
+[![guild-badge][]][guild]
 # rexmit
-![rexmit](https://repository-images.githubusercontent.com/538283283/d59b0b4f-63a7-429a-a5b7-44d067245e0c)
+
+![rexmit logo][logo]
+
 follow these instructions to deploy rexmit
 
 ## requirements
@@ -64,3 +67,8 @@ sudo docker run --name mongo -v ./data/db:/data/db \
 	-e MONGO_INITDB_ROOT_PASSWORD= \
 	-d mongo
 ```
+
+
+[guild]: https://discord.gg/invite/95eUjKqT7e
+[guild-badge]: https://img.shields.io/discord/1100799461581668372.svg?style=flat-square&colorB=7289DA
+[logo]: https://repository-images.githubusercontent.com/538283283/d59b0b4f-63a7-429a-a5b7-44d067245e0c
