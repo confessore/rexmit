@@ -8,7 +8,7 @@ use serenity::{
 };
 use tracing::{debug, error};
 
-use crate::{command::check_msg, models::guild::Guild};
+use crate::{command::check_msg, context::context_boot_guild, models::guild::Guild};
 
 /// gets the rexmit database from mongo
 ///
@@ -782,115 +782,57 @@ pub async fn get_guild_expiration(guild_id: String) -> Option<DateTime<Utc>> {
 }
 
 pub async fn slot_is_available(ctx: &Context, guild_id: String) -> Option<bool> {
-    if let Some(used_slots) = count_guilds_joined_to_channel().await {
-
-    }
-    match count_guilds_joined_to_channel().await {
-        Some(used_slots) => {
-            debug!("count guilds joined to channel is some");
-            match env::var("MAX_SLOTS")
-                .expect("Expected a MAX_SLOTS in the environment")
-                .parse::<u64>()
-            {
-                Ok(max_slots) => {
-                    debug!("max slots parse is ok");
-                    if used_slots < max_slots {
-                        // connect
-
-                        return Some(true);
-                    } else {
-                        match get_guild_has_reservation(guild_id).await {
-                            Some(guild_has_reservation) => {
-                                debug!("get_guild_has_reservation is some");
-                                if guild_has_reservation {
-                                    match count_free_guilds_joined_to_channel().await {
-                                        Some(used_free_slots) => {
-                                            debug!("count free guilds joined to channel is some");
-                                            if used_free_slots > 0 {
-                                                match get_first_free_guild_id_joined_to_channel().await
-                                                {
-                                                    Some(guild_id) => {
-                                                        debug!("get_first_free_guild_joined_to_channel is some");
-                                                        match get_guild_document(
-                                                            guild_id.to_string(),
-                                                        )
-                                                        .await
-                                                        {
-                                                            Some(guild) => {
-                                                                debug!(
-                                                                    "get_guild_document is some"
-                                                                );
-                                                                match guild
-                                                                    .message_channel_id
-                                                                    .parse::<u64>()
-                                                                {
-                                                                    Ok(message_channel_id) => {
-                                                                        debug!("message_channel_id parse is ok");
-                                                                        // boot the free user and connect the guild with a reservation
-
-                                                                        check_msg(ChannelId(message_channel_id).say(&ctx.http, "retreated to attend to a reserved guild").await);
-                                                                        return Some(true);
-                                                                    }
-                                                                    Err(why) => {
-                                                                        debug!("message_channel_id parse is err");
-                                                                        error!("{}", why);
-                                                                        return None;
-                                                                    }
-                                                                }
-                                                            }
-                                                            None => {
-                                                                debug!(
-                                                                    "get_guild_document is none"
-                                                                );
-                                                                return None;
-                                                            }
-                                                        }
-                                                    }
-                                                    None => {
-                                                        debug!("get_first_free_guild_joined_to_channel is none");
-                                                        return None;
-                                                    }
-                                                }
-                                            } else {
-                                                // take to the discord channel with a pitchfork
-                                                // https://discord.gg/95eUjKqT7e
-                                                //
-                                                //
-                                                return Some(false);
-                                            }
-                                        }
-                                        None => {
-                                            debug!("count free guilds joined to channel is none");
-                                            return None;
-                                        }
-                                    }
-                                } else {
-                                    // first come first serve, maybe make a reservation?
-                                    // post https link
-                                    //
-                                    //
+    if let Some(guild) = get_guild_document(guild_id).await {
+        if let Some(used_slots) = count_guilds_joined_to_channel().await {
+            if let Some(max_slots) = get_max_slots() {
+                if used_slots < max_slots {
+                    return Some(true);
+                } else {
+                    if guild.has_reservation() {
+                        if let Some(free_slots) = count_free_guilds_joined_to_channel().await {
+                            if free_slots > 0 {
+                                return boot_first_free_guild(&ctx).await;
+                            } else {
+                                if let Some(message_channel_id) =
+                                    parse_u64_from_string(guild.message_channel_id)
+                                {
+                                    check_msg(ChannelId(message_channel_id).say(&ctx.http, "it looks like you have a reservation but are unable to join. please bring your torch and pitchfork with you to our discord server at https://discord.gg/95eUjKqT7e and let us know what is going on so we can look in to it 🐣").await);
                                     return Some(false);
                                 }
                             }
-                            None => {
-                                debug!("get_guild_has_reservation is none");
-                                return None;
-                            }
+                        }
+                    } else {
+                        if let Some(message_channel_id) =
+                            parse_u64_from_string(guild.message_channel_id)
+                        {
+                            check_msg(ChannelId(message_channel_id).say(&ctx.http, format!("it looks like you do not have an active reservation and all free slots are currently full. please visit https://balasolu.com/rexmit/{} to reserve rexmit for your guild 🐣", guild.id)).await);
+                            return Some(false);
                         }
                     }
                 }
-                Err(why) => {
-                    debug!("max slots parse is err");
-                    error!("{}", why);
-                    return None;
-                }
             }
         }
-        None => {
-            debug!("count guilds joined to channel is none");
-            return None;
+    }
+    return None;
+}
+
+async fn boot_first_free_guild(ctx: &Context) -> Option<bool> {
+    if let Some(free_guild) = get_first_free_guild_joined_to_channel().await {
+        if let Some(free_guild_id) = parse_u64_from_string(free_guild.id) {
+            if let Some(free_guild_message_channel_id) =
+                parse_u64_from_string(free_guild.message_channel_id)
+            {
+                context_boot_guild(&ctx, GuildId(free_guild_id)).await;
+                check_msg(
+                    ChannelId(free_guild_message_channel_id)
+                        .say(&ctx.http, "retreated to attend to a reserved guild 🐣")
+                        .await,
+                );
+                return Some(true);
+            }
         }
     }
+    return None;
 }
 
 fn parse_u64_from_string(input: String) -> Option<u64> {
@@ -907,6 +849,6 @@ fn parse_u64_from_string(input: String) -> Option<u64> {
 }
 
 fn get_max_slots() -> Option<u64> {
-    let max_slots =  env::var("MAX_SLOTS").expect("Expected a MAX_SLOTS in the environment");
+    let max_slots = env::var("MAX_SLOTS").expect("Expected a MAX_SLOTS in the environment");
     return parse_u64_from_string(max_slots);
 }
