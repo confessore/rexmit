@@ -447,7 +447,7 @@ pub async fn set_joined_to_channel(
 ///
 /// ### returns
 ///
-/// some vector of string or none
+/// some vector of string guild id or none
 ///
 pub async fn get_guild_ids_joined_to_channel() -> Option<Vec<String>> {
     let guild_collection_option = get_guild_collection().await;
@@ -506,7 +506,7 @@ pub async fn get_guild_ids_joined_to_channel() -> Option<Vec<String>> {
 ///
 /// ### returns
 ///
-/// some vector of string or none
+/// some u64 count of all guilds joined to voice channels or none
 ///
 pub async fn count_guilds_joined_to_channel() -> Option<u64> {
     let guild_collection_option = get_guild_collection().await;
@@ -542,7 +542,7 @@ pub async fn count_guilds_joined_to_channel() -> Option<u64> {
 ///
 /// ### returns
 ///
-/// some vector of string or none
+/// some u64 count of guilds with a reservation or none
 ///
 pub async fn count_guilds_with_a_reservation_joined_to_channel() -> Option<u64> {
     let guild_collection_option = get_guild_collection().await;
@@ -579,7 +579,7 @@ pub async fn count_guilds_with_a_reservation_joined_to_channel() -> Option<u64> 
 ///
 /// ### returns
 ///
-/// some vector of string or none
+/// some u64 count of free guilds or none
 ///
 pub async fn count_free_guilds_joined_to_channel() -> Option<u64> {
     let guild_collection_option = get_guild_collection().await;
@@ -608,6 +608,39 @@ pub async fn count_free_guilds_joined_to_channel() -> Option<u64> {
     }
 }
 
+/// gets the first free guild id that is found to be joined to channel in mongo
+///
+/// ### arguments
+///
+/// * `none` - none
+///
+/// ### returns
+///
+/// some guild id or none
+///
+pub async fn get_first_free_guild_id_joined_to_channel() -> Option<GuildId> {
+    match get_first_free_guild_joined_to_channel().await {
+        Some(guild) => {
+            debug!("guild option is some");
+            match guild.id.parse::<u64>() {
+                Ok(guild_id) => {
+                    debug!("guild id result is ok");
+                    return Some(GuildId(guild_id));
+                }
+                Err(why) => {
+                    debug!("guild id result is err");
+                    error!("{}", why);
+                    return None;
+                }
+            };
+        }
+        None => {
+            debug!("guild option is none");
+            return None;
+        }
+    }
+}
+
 /// gets the first free guild that is found to be joined to channel in mongo
 ///
 /// ### arguments
@@ -616,9 +649,9 @@ pub async fn count_free_guilds_joined_to_channel() -> Option<u64> {
 ///
 /// ### returns
 ///
-/// some vector of string or none
+/// some guild or none
 ///
-pub async fn get_first_free_guild_joined_to_channel() -> Option<GuildId> {
+pub async fn get_first_free_guild_joined_to_channel() -> Option<Guild> {
     let guild_collection_option = get_guild_collection().await;
     match guild_collection_option {
         Some(guild_collection) => {
@@ -632,17 +665,7 @@ pub async fn get_first_free_guild_joined_to_channel() -> Option<GuildId> {
                     match guild_option {
                         Some(guild) => {
                             debug!("guild option is some");
-                            match guild.id.parse::<u64>() {
-                                Ok(guild_id) => {
-                                    debug!("guild id result is ok");
-                                    return Some(GuildId(guild_id));
-                                }
-                                Err(why) => {
-                                    debug!("guild id result is err");
-                                    error!("{}", why);
-                                    return None;
-                                }
-                            };
+                            return Some(guild);
                         }
                         None => {
                             debug!("guild option is none");
@@ -672,7 +695,7 @@ pub async fn get_first_free_guild_joined_to_channel() -> Option<GuildId> {
 ///
 /// ### returns
 ///
-/// some vector of string track urls
+/// some vector of string track urls or none
 ///
 pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
     let guild_collection_option = get_guild_collection().await;
@@ -781,7 +804,7 @@ pub async fn slot_is_available(ctx: &Context, guild_id: String) -> Option<bool> 
                                         Some(used_free_slots) => {
                                             debug!("count free guilds joined to channel is some");
                                             if used_free_slots > 0 {
-                                                match get_first_free_guild_joined_to_channel().await
+                                                match get_first_free_guild_id_joined_to_channel().await
                                                 {
                                                     Some(guild_id) => {
                                                         debug!("get_first_free_guild_joined_to_channel is some");
