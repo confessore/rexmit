@@ -782,6 +782,9 @@ pub async fn get_guild_expiration(guild_id: String) -> Option<DateTime<Utc>> {
 }
 
 pub async fn slot_is_available(ctx: &Context, guild_id: String) -> Option<bool> {
+    if let Some(used_slots) = count_guilds_joined_to_channel().await {
+
+    }
     match count_guilds_joined_to_channel().await {
         Some(used_slots) => {
             debug!("count guilds joined to channel is some");
@@ -888,4 +891,22 @@ pub async fn slot_is_available(ctx: &Context, guild_id: String) -> Option<bool> 
             return None;
         }
     }
+}
+
+fn parse_u64_from_string(input: String) -> Option<u64> {
+    match input.parse::<u64>() {
+        Ok(output) => {
+            debug!("u64 parse is ok");
+            return Some(output);
+        }
+        Err(why) => {
+            error!("u64 parse is err: {}", why);
+            return None;
+        }
+    }
+}
+
+fn get_max_slots() -> Option<u64> {
+    let max_slots =  env::var("MAX_SLOTS").expect("Expected a MAX_SLOTS in the environment");
+    return parse_u64_from_string(max_slots);
 }
