@@ -781,7 +781,11 @@ pub async fn get_guild_expiration(guild_id: String) -> Option<DateTime<Utc>> {
     }
 }
 
-pub async fn slot_is_available(ctx: &Context, guild_id: String) -> Option<bool> {
+pub async fn slot_is_available(
+    ctx: &Context,
+    guild_id: String,
+    message_channel_id: ChannelId,
+) -> Option<bool> {
     if let Some(guild) = get_guild_document(guild_id).await {
         if let Some(used_slots) = count_guilds_joined_to_channel().await {
             if let Some(max_slots) = get_max_slots() {
@@ -793,21 +797,13 @@ pub async fn slot_is_available(ctx: &Context, guild_id: String) -> Option<bool> 
                             if free_slots > 0 {
                                 return boot_first_free_guild(&ctx).await;
                             } else {
-                                if let Some(message_channel_id) =
-                                    parse_u64_from_string(guild.message_channel_id)
-                                {
-                                    check_msg(ChannelId(message_channel_id).say(&ctx.http, "it looks like you have a reservation but are unable to join. please bring your torch and pitchfork with you to our discord server at https://discord.gg/95eUjKqT7e and let us know what is going on so we can look in to it 🐣").await);
-                                    return Some(false);
-                                }
+                                check_msg(message_channel_id.say(&ctx.http, "it looks like you have a reservation but are unable to join. please bring your torch and pitchfork with you to our discord server at https://discord.gg/95eUjKqT7e and let us know what is going on so we can look in to it 🐣").await);
+                                return Some(false);
                             }
                         }
                     } else {
-                        if let Some(message_channel_id) =
-                            parse_u64_from_string(guild.message_channel_id)
-                        {
-                            check_msg(ChannelId(message_channel_id).say(&ctx.http, format!("it looks like you do not have an active reservation and all free slots are currently full. please visit https://balasolu.com/rexmit/{} to reserve rexmit for your guild 🐣", guild.id)).await);
-                            return Some(false);
-                        }
+                        check_msg(message_channel_id.say(&ctx.http, format!("it looks like you do not have an active reservation and all free slots are currently full. please visit https://balasolu.com/rexmit/{} to reserve rexmit for your guild 🐣", guild.id)).await);
+                        return Some(false);
                     }
                 }
             }
