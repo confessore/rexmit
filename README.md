@@ -1,4 +1,4 @@
-[![guild-badge][]][guild]
+[![invite-badge][]][invite] [![guild-badge][]][guild]
 # rexmit
 
 ![rexmit logo][logo]
@@ -21,13 +21,13 @@ follow these instructions to deploy rexmit
 
 3. create an .env file from .env.example
 
-```
-    DEBUG can be 1 for debug or 0 for release
-    DISCORD_TOKEN sourced from discord developer portal
-    DATABASE_URL can be a mongodb connection string or blank
-    
-    the idea is to feature support for mongodb but also to feature support for no database by leaving DATABASE_URL blank
-```
+    ```
+        DEBUG can be 1 for debug or 0 for release
+        DISCORD_TOKEN sourced from discord developer portal
+        DATABASE_URL can be a mongodb connection string or blank
+        
+        the idea is to feature support for mongodb but also to feature support for no database by leaving DATABASE_URL blank
+    ```
 
 4. build the image
     ```
@@ -68,7 +68,8 @@ sudo docker run --name mongo -v ./data/db:/data/db \
 	-d mongo
 ```
 
-
+[invite]: https://discord.com/login?redirect_to=%2Foauth2%2Fauthorize%3Fclient_id%3D1021189711366213672%26permissions%3D0%26scope%3Dbot
+[invite-badge]: https://img.shields.io/badge/invite-rexmit%20to%20your%20discord%20server-red
 [guild]: https://discord.gg/invite/95eUjKqT7e
 [guild-badge]: https://img.shields.io/discord/1100799461581668372.svg?style=flat-square&colorB=7289DA
 [logo]: https://repository-images.githubusercontent.com/538283283/d59b0b4f-63a7-429a-a5b7-44d067245e0c
