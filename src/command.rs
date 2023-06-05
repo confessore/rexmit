@@ -98,10 +98,10 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
         context_slot_is_available(ctx, guild.id.to_string(), msg.channel_id).await;
     //let guild_has_reservation = get_guild_has_reservation(guild.id.to_string()).await;
     match slot_is_available {
-        Some(reserved) => {
-            debug!("guild_has_reservation option is some");
-            if reserved {
-                let log = "guild has reservation";
+        Some(slot_is_available) => {
+            debug!("slot_is_available option is some");
+            if slot_is_available {
+                let log = "a slot is available";
                 debug!(log);
                 match context_join_to_voice_channel(&ctx, &msg, &guild).await {
                     Some(_success) => {
@@ -111,14 +111,12 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                     None => {
                         let log = "context join to voice channel is none";
                         debug!(log);
-                        check_msg(msg.channel_id.say(&ctx.http, log).await);
                         return Err(CommandError::from(log));
                     }
                 }
             } else {
-                let log = "guild has no reservation";
+                let log = "a slot is not available";
                 debug!(log);
-                check_msg(msg.channel_id.say(&ctx.http, log).await);
                 return Err(CommandError::from(log));
             }
         }
