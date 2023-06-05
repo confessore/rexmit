@@ -2,8 +2,7 @@ use crate::{
     command::check_msg,
     context::context_repopulate_guild_queue,
     database::{
-        clear_guild_queue, get_guild_has_reservation, get_guild_ids_joined_to_channel,
-        pop_guild_queue, set_joined_to_channel,
+        clear_guild_queue, get_guild_ids_joined_to_channel, pop_guild_queue, set_joined_to_channel,
     },
 };
 use serenity::{
@@ -75,36 +74,21 @@ impl EventHandler for Handler {
             Some(guild_ids) => {
                 debug!("guild ids option is some");
                 for guild_id in guild_ids {
-                    match get_guild_has_reservation(guild_id.to_string()).await {
-                        Some(guild_has_reservation) => {
-                            debug!("guild_has_reservation option is some");
-                            if guild_has_reservation {
-                                match guild_id.parse::<u64>() {
-                                    Ok(guild_id) => {
-                                        debug!("guild id result is ok");
-                                        match context_repopulate_guild_queue(
-                                            &ctx,
-                                            GuildId(guild_id),
-                                        )
-                                        .await
-                                        {
-                                            Some(_songbird_arc) => {
-                                                debug!("songbird arc option is some");
-                                            }
-                                            None => {
-                                                debug!("songbird arc option is none");
-                                            }
-                                        }
-                                    }
-                                    Err(why) => {
-                                        debug!("guild id result is err");
-                                        error!("{}", why);
-                                    }
+                    match guild_id.parse::<u64>() {
+                        Ok(guild_id) => {
+                            debug!("guild id result is ok");
+                            match context_repopulate_guild_queue(&ctx, GuildId(guild_id)).await {
+                                Some(_songbird_arc) => {
+                                    debug!("songbird arc option is some");
+                                }
+                                None => {
+                                    debug!("songbird arc option is none");
                                 }
                             }
                         }
-                        None => {
-                            debug!("guild_has_reservation option is none");
+                        Err(why) => {
+                            debug!("guild id result is err");
+                            error!("{}", why);
                         }
                     }
                 }
