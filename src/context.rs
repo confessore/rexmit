@@ -8,7 +8,12 @@ use songbird::{input::Restartable, Event, Songbird, TrackEvent};
 use tracing::{debug, error};
 
 use crate::{
-    database::{get_guild_document, set_joined_to_channel},
+    command::check_msg,
+    database::{
+        count_free_guilds_joined_to_channel, count_guilds_joined_to_channel,
+        get_first_free_guild_joined_to_channel, get_guild_document, set_joined_to_channel,
+    },
+    functions::{get_max_slots, parse_u64_from_string},
     handler::{Periodic, TrackEndNotifier},
 };
 
@@ -251,4 +256,66 @@ pub async fn context_repopulate_guild_queue(
             return None;
         }
     };
+}
+
+pub async fn context_slot_is_available(
+    ctx: &Context,
+    guild_id: String,
+    message_channel_id: ChannelId,
+) -> Option<bool> {
+    if let Some(guild) = get_guild_document(guild_id).await {
+        if let Some(used_slots) = count_guilds_joined_to_channel().await {
+            if let Some(free_slots) = count_free_guilds_joined_to_channel().await {
+                if let Some(max_slots) = get_max_slots() {
+                    if used_slots < max_slots {
+                        if guild.has_reservation() {
+                            check_msg(message_channel_id.say(&ctx.http, "good news! this guild has a reservation. please bring your friends and family with you to our discord server https://discord.gg/95eUjKqT7e 🐣").await);
+                            return Some(true);
+                        } else {
+                            if free_slots < max_slots / 2 {
+                                check_msg(message_channel_id.say(&ctx.http, "good news! there is a free slot available. please bring your friends and family with you to our discord server https://discord.gg/95eUjKqT7e 🐣").await);
+                                return Some(true);
+                            } else {
+                                check_msg(message_channel_id.say(&ctx.http, format!("it looks like you do not have an active reservation and all free slots are currently full. please visit https://balasolu.com/rexmit/{} to reserve rexmit for your guild 🐣", guild.id)).await);
+                                return Some(false);
+                            }
+                        }
+                    } else {
+                        if guild.has_reservation() {
+                            if free_slots > 0 {
+                                check_msg(message_channel_id.say(&ctx.http, "good news! this guild has a reservation. please bring your friends and family with you to our discord server https://discord.gg/95eUjKqT7e 🐣").await);
+                                return context_boot_first_free_guild(&ctx).await;
+                            } else {
+                                check_msg(message_channel_id.say(&ctx.http, "it looks like you have a reservation but are unable to join. please bring your torch and pitchfork with you to our discord server https://discord.gg/95eUjKqT7e and let us know what is going on so we can look in to it 🐣").await);
+                                return Some(false);
+                            }
+                        } else {
+                            check_msg(message_channel_id.say(&ctx.http, format!("it looks like you do not have an active reservation and all free slots are currently full. please visit https://balasolu.com/rexmit/{} to reserve rexmit for your guild 🐣", guild.id)).await);
+                            return Some(false);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return None;
+}
+
+async fn context_boot_first_free_guild(ctx: &Context) -> Option<bool> {
+    if let Some(free_guild) = get_first_free_guild_joined_to_channel().await {
+        if let Some(free_guild_id) = parse_u64_from_string(free_guild.id) {
+            if let Some(free_guild_message_channel_id) =
+                parse_u64_from_string(free_guild.message_channel_id)
+            {
+                context_boot_guild(&ctx, GuildId(free_guild_id)).await;
+                check_msg(
+                    ChannelId(free_guild_message_channel_id)
+                        .say(&ctx.http, "retreated to attend to a reserved guild 🐣")
+                        .await,
+                );
+                return Some(true);
+            }
+        }
+    }
+    return None;
 }

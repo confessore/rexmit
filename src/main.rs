@@ -7,6 +7,7 @@ use tracing::Level;
 pub mod command;
 pub mod context;
 pub mod database;
+pub mod functions;
 pub mod handler;
 pub mod models;
 

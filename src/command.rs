@@ -16,11 +16,8 @@ use songbird::{
 use tracing::debug;
 
 use crate::{
-    context::context_join_to_voice_channel,
-    database::{
-        clear_guild_queue, get_guild_has_reservation, set_guild_queue, set_joined_to_channel,
-        slot_is_available,
-    },
+    context::{context_join_to_voice_channel, context_slot_is_available},
+    database::{clear_guild_queue, set_guild_queue, set_joined_to_channel},
     handler::{SongEndNotifier, SongFader},
 };
 
@@ -97,7 +94,8 @@ async fn j(ctx: &Context, msg: &Message) -> CommandResult {
 #[only_in(guilds)]
 async fn join(ctx: &Context, msg: &Message) -> CommandResult {
     let guild = msg.guild(&ctx.cache).unwrap();
-    let slot_is_available = slot_is_available(ctx, guild.id.to_string(), msg.channel_id).await;
+    let slot_is_available =
+        context_slot_is_available(ctx, guild.id.to_string(), msg.channel_id).await;
     //let guild_has_reservation = get_guild_has_reservation(guild.id.to_string()).await;
     match slot_is_available {
         Some(reserved) => {
