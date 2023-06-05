@@ -788,22 +788,34 @@ pub async fn slot_is_available(
 ) -> Option<bool> {
     if let Some(guild) = get_guild_document(guild_id).await {
         if let Some(used_slots) = count_guilds_joined_to_channel().await {
-            if let Some(max_slots) = get_max_slots() {
-                if used_slots < max_slots {
-                    return Some(true);
-                } else {
-                    if guild.has_reservation() {
-                        if let Some(free_slots) = count_free_guilds_joined_to_channel().await {
+            if let Some(free_slots) = count_free_guilds_joined_to_channel().await {
+                if let Some(max_slots) = get_max_slots() {
+                    if used_slots < max_slots {
+                        if guild.has_reservation() {
+                            check_msg(message_channel_id.say(&ctx.http, "good news! this guild has a reservation. please bring your friends and family with you to our discord server at https://discord.gg/95eUjKqT7e 🐣").await);
+                            return Some(true);
+                        } else {
+                            if free_slots < max_slots / 2 {
+                                check_msg(message_channel_id.say(&ctx.http, "good news! there is a free slot available. please bring your friends and family with you to our discord server at https://discord.gg/95eUjKqT7e 🐣").await);
+                                return Some(true);
+                            } else {
+                                check_msg(message_channel_id.say(&ctx.http, format!("it looks like you do not have an active reservation and all free slots are currently full. please visit https://balasolu.com/rexmit/{} to reserve rexmit for your guild 🐣", guild.id)).await);
+                                return Some(false);
+                            }
+                        }
+                    } else {
+                        if guild.has_reservation() {
                             if free_slots > 0 {
+                                check_msg(message_channel_id.say(&ctx.http, "good news! this guild has a reservation. please bring your friends and family with you to our discord server at https://discord.gg/95eUjKqT7e 🐣").await);
                                 return boot_first_free_guild(&ctx).await;
                             } else {
                                 check_msg(message_channel_id.say(&ctx.http, "it looks like you have a reservation but are unable to join. please bring your torch and pitchfork with you to our discord server at https://discord.gg/95eUjKqT7e and let us know what is going on so we can look in to it 🐣").await);
                                 return Some(false);
                             }
+                        } else {
+                            check_msg(message_channel_id.say(&ctx.http, format!("it looks like you do not have an active reservation and all free slots are currently full. please visit https://balasolu.com/rexmit/{} to reserve rexmit for your guild 🐣", guild.id)).await);
+                            return Some(false);
                         }
-                    } else {
-                        check_msg(message_channel_id.say(&ctx.http, format!("it looks like you do not have an active reservation and all free slots are currently full. please visit https://balasolu.com/rexmit/{} to reserve rexmit for your guild 🐣", guild.id)).await);
-                        return Some(false);
                     }
                 }
             }
