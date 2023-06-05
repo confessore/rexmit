@@ -121,7 +121,7 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
             }
         }
         None => {
-            debug!("guild_has_reservation option is none");
+            debug!("slot_is_available option is none");
             match context_join_to_voice_channel(&ctx, &msg, &guild).await {
                 Some(_success) => {
                     debug!("context join to voice channel is some");
