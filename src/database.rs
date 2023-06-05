@@ -26,7 +26,14 @@ pub async fn get_rexmit_database() -> Option<Database> {
             match client_result {
                 Ok(client) => {
                     debug!("client result is ok");
-                    let database = client.database("rexmit");
+                    // storm better way to account for debug environment variable
+                    let debug = env::var("DEBUG")
+                        .expect("Expected a DEBUG == to 1 or 0 in the environment");
+                    let mut database_name = "rexmit";
+                    if debug == "1" {
+                        database_name = "rexmit-dev"
+                    }
+                    let database = client.database(database_name);
                     return Some(database);
                 }
                 Err(why) => {
@@ -437,7 +444,7 @@ pub async fn set_joined_to_channel(
 ///
 /// ### returns
 ///
-/// some vector of string or none
+/// some vector of string guild id or none
 ///
 pub async fn get_guild_ids_joined_to_channel() -> Option<Vec<String>> {
     let guild_collection_option = get_guild_collection().await;
@@ -496,7 +503,7 @@ pub async fn get_guild_ids_joined_to_channel() -> Option<Vec<String>> {
 ///
 /// ### returns
 ///
-/// some vector of string or none
+/// some u64 count of all guilds joined to voice channels or none
 ///
 pub async fn count_guilds_joined_to_channel() -> Option<u64> {
     let guild_collection_option = get_guild_collection().await;
@@ -524,7 +531,7 @@ pub async fn count_guilds_joined_to_channel() -> Option<u64> {
     }
 }
 
-/// counts subscribed guilds that are found to be joined to channel in mongo
+/// counts guilds with a reservation that are found to be joined to channel in mongo
 ///
 /// ### arguments
 ///
@@ -532,9 +539,9 @@ pub async fn count_guilds_joined_to_channel() -> Option<u64> {
 ///
 /// ### returns
 ///
-/// some vector of string or none
+/// some u64 count of guilds with a reservation or none
 ///
-pub async fn count_subscribed_guilds_joined_to_channel() -> Option<u64> {
+pub async fn count_guilds_with_a_reservation_joined_to_channel() -> Option<u64> {
     let guild_collection_option = get_guild_collection().await;
     match guild_collection_option {
         Some(guild_collection) => {
@@ -569,7 +576,7 @@ pub async fn count_subscribed_guilds_joined_to_channel() -> Option<u64> {
 ///
 /// ### returns
 ///
-/// some vector of string or none
+/// some u64 count of free guilds or none
 ///
 pub async fn count_free_guilds_joined_to_channel() -> Option<u64> {
     let guild_collection_option = get_guild_collection().await;
@@ -598,6 +605,39 @@ pub async fn count_free_guilds_joined_to_channel() -> Option<u64> {
     }
 }
 
+/// gets the first free guild id that is found to be joined to channel in mongo
+///
+/// ### arguments
+///
+/// * `none` - none
+///
+/// ### returns
+///
+/// some guild id or none
+///
+pub async fn get_first_free_guild_id_joined_to_channel() -> Option<GuildId> {
+    match get_first_free_guild_joined_to_channel().await {
+        Some(guild) => {
+            debug!("guild option is some");
+            match guild.id.parse::<u64>() {
+                Ok(guild_id) => {
+                    debug!("guild id result is ok");
+                    return Some(GuildId(guild_id));
+                }
+                Err(why) => {
+                    debug!("guild id result is err");
+                    error!("{}", why);
+                    return None;
+                }
+            };
+        }
+        None => {
+            debug!("guild option is none");
+            return None;
+        }
+    }
+}
+
 /// gets the first free guild that is found to be joined to channel in mongo
 ///
 /// ### arguments
@@ -606,9 +646,9 @@ pub async fn count_free_guilds_joined_to_channel() -> Option<u64> {
 ///
 /// ### returns
 ///
-/// some vector of string or none
+/// some guild or none
 ///
-pub async fn get_first_free_guild_joined_to_channel() -> Option<GuildId> {
+pub async fn get_first_free_guild_joined_to_channel() -> Option<Guild> {
     let guild_collection_option = get_guild_collection().await;
     match guild_collection_option {
         Some(guild_collection) => {
@@ -622,17 +662,7 @@ pub async fn get_first_free_guild_joined_to_channel() -> Option<GuildId> {
                     match guild_option {
                         Some(guild) => {
                             debug!("guild option is some");
-                            match guild.id.parse::<u64>() {
-                                Ok(guild_id) => {
-                                    debug!("guild id result is ok");
-                                    return Some(GuildId(guild_id));
-                                }
-                                Err(why) => {
-                                    debug!("guild id result is err");
-                                    error!("{}", why);
-                                    return None;
-                                }
-                            };
+                            return Some(guild);
                         }
                         None => {
                             debug!("guild option is none");
@@ -662,7 +692,7 @@ pub async fn get_first_free_guild_joined_to_channel() -> Option<GuildId> {
 ///
 /// ### returns
 ///
-/// some vector of string track urls
+/// some vector of string track urls or none
 ///
 pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
     let guild_collection_option = get_guild_collection().await;
@@ -700,7 +730,7 @@ pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
     }
 }
 
-/// gets a guild's subscription status from mongo given a guild id
+/// gets a guild's reservation status from mongo given a guild id
 ///
 /// ### arguments
 ///
@@ -710,12 +740,12 @@ pub async fn get_guild_queue(guild_id: String) -> Option<Vec<String>> {
 ///
 /// some bool or none
 ///
-pub async fn get_guild_is_subscribed(guild_id: String) -> Option<bool> {
+pub async fn get_guild_has_reservation(guild_id: String) -> Option<bool> {
     let guild_option = get_guild_document(guild_id).await;
     match guild_option {
         Some(guild) => {
             debug!("guild option is some");
-            return Some(guild.is_subscribed());
+            return Some(guild.has_reservation());
         }
         None => {
             debug!("guild option is none");

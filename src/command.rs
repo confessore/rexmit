@@ -16,10 +16,8 @@ use songbird::{
 use tracing::debug;
 
 use crate::{
-    context::context_join_to_voice_channel,
-    database::{
-        clear_guild_queue, get_guild_is_subscribed, set_guild_queue, set_joined_to_channel,
-    },
+    context::{context_join_to_voice_channel, context_slot_is_available},
+    database::{clear_guild_queue, set_guild_queue, set_joined_to_channel},
     handler::{SongEndNotifier, SongFader},
 };
 
@@ -32,7 +30,7 @@ struct General;
 
 #[command]
 async fn d(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return deafen(ctx, msg, _args).await;
+    return deafen(&ctx, &msg, _args).await;
 }
 
 #[command]
@@ -81,7 +79,7 @@ async fn j(ctx: &Context, msg: &Message) -> CommandResult {
 
 /// joins the command issuer's voice channel
 /// without a database url, the join simply occurs
-/// with a database url, a subscription check is performed
+/// with a database url, a reservation check is performed
 ///
 /// ### arguments
 ///
@@ -96,14 +94,16 @@ async fn j(ctx: &Context, msg: &Message) -> CommandResult {
 #[only_in(guilds)]
 async fn join(ctx: &Context, msg: &Message) -> CommandResult {
     let guild = msg.guild(&ctx.cache).unwrap();
-    let subscribed_option = get_guild_is_subscribed(guild.id.to_string()).await;
-    match subscribed_option {
-        Some(subscribed) => {
-            debug!("subscribed option is some");
-            if subscribed {
-                let log = "guild is subscribed";
+    let slot_is_available =
+        context_slot_is_available(ctx, guild.id.to_string(), msg.channel_id).await;
+    //let guild_has_reservation = get_guild_has_reservation(guild.id.to_string()).await;
+    match slot_is_available {
+        Some(slot_is_available) => {
+            debug!("slot_is_available option is some");
+            if slot_is_available {
+                let log = "a slot is available";
                 debug!(log);
-                match context_join_to_voice_channel(ctx, msg, &guild).await {
+                match context_join_to_voice_channel(&ctx, &msg, &guild).await {
                     Some(_success) => {
                         debug!("context join to voice channel is some");
                         return Ok(());
@@ -111,20 +111,18 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
                     None => {
                         let log = "context join to voice channel is none";
                         debug!(log);
-                        check_msg(msg.channel_id.say(&ctx.http, log).await);
                         return Err(CommandError::from(log));
                     }
                 }
             } else {
-                let log = "guild is not subscribed";
+                let log = "a slot is not available";
                 debug!(log);
-                check_msg(msg.channel_id.say(&ctx.http, log).await);
                 return Err(CommandError::from(log));
             }
         }
         None => {
-            debug!("subscribed option is none");
-            match context_join_to_voice_channel(ctx, msg, &guild).await {
+            debug!("slot_is_available option is none");
+            match context_join_to_voice_channel(&ctx, &msg, &guild).await {
                 Some(_success) => {
                     debug!("context join to voice channel is some");
                     return Ok(());
@@ -143,7 +141,7 @@ async fn join(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn l(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return leave(ctx, msg, _args).await;
+    return leave(&ctx, &msg, _args).await;
 }
 
 #[command]
@@ -181,7 +179,7 @@ async fn leave(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn m(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return mute(ctx, msg, _args).await;
+    return mute(&ctx, &msg, _args).await;
 }
 
 #[command]
@@ -226,7 +224,7 @@ async fn mute(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn p(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return ping(ctx, msg, _args).await;
+    return ping(&ctx, &msg, _args).await;
 }
 
 #[command]
@@ -327,7 +325,7 @@ async fn play_fade(ctx: &Context, msg: &Message, mut args: Args) -> CommandResul
 #[command]
 #[only_in(guilds)]
 async fn q(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    return queue(ctx, msg, args).await;
+    return queue(&ctx, &msg, args).await;
 }
 
 #[command]
@@ -433,7 +431,7 @@ async fn queue(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn s(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return skip(ctx, msg, _args).await;
+    return skip(&ctx, &msg, _args).await;
 }
 
 #[command]
@@ -474,13 +472,13 @@ async fn skip(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn c(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return stop(ctx, msg, _args).await;
+    return stop(&ctx, &msg, _args).await;
 }
 
 #[command]
 #[only_in(guilds)]
 async fn clear(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return stop(ctx, msg, _args).await;
+    return stop(&ctx, &msg, _args).await;
 }
 
 #[command]
@@ -521,7 +519,7 @@ async fn stop(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn ud(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return undeafen(ctx, msg, _args).await;
+    return undeafen(&ctx, &msg, _args).await;
 }
 
 #[command]
@@ -560,7 +558,7 @@ async fn undeafen(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 async fn um(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    return unmute(ctx, msg, _args).await;
+    return unmute(&ctx, &msg, _args).await;
 }
 
 #[command]

@@ -1,11 +1,8 @@
 use crate::{
     command::check_msg,
-    context::{context_boot_guild, context_repopulate_guild_queue},
+    context::context_repopulate_guild_queue,
     database::{
-        clear_guild_queue, count_free_guilds_joined_to_channel, count_guilds_joined_to_channel,
-        count_subscribed_guilds_joined_to_channel, get_first_free_guild_joined_to_channel,
-        get_guild_ids_joined_to_channel, get_guild_is_subscribed, pop_guild_queue,
-        set_joined_to_channel,
+        clear_guild_queue, get_guild_ids_joined_to_channel, pop_guild_queue, set_joined_to_channel,
     },
 };
 use serenity::{
@@ -15,6 +12,7 @@ use serenity::{
     model::{
         gateway::Ready,
         prelude::{Activity, ChannelId, GuildId},
+        voice::VoiceState,
     },
 };
 use songbird::{Event, EventContext, EventHandler as VoiceEventHandler, Songbird};
@@ -76,36 +74,21 @@ impl EventHandler for Handler {
             Some(guild_ids) => {
                 debug!("guild ids option is some");
                 for guild_id in guild_ids {
-                    match get_guild_is_subscribed(guild_id.to_string()).await {
-                        Some(guild_is_subscribed) => {
-                            debug!("guild_is_subscribed option is some");
-                            if guild_is_subscribed {
-                                match guild_id.parse::<u64>() {
-                                    Ok(guild_id) => {
-                                        debug!("guild id result is ok");
-                                        match context_repopulate_guild_queue(
-                                            &ctx,
-                                            GuildId(guild_id),
-                                        )
-                                        .await
-                                        {
-                                            Some(songbird_arc) => {
-                                                debug!("songbird arc option is some");
-                                            }
-                                            None => {
-                                                debug!("songbird arc option is none");
-                                            }
-                                        }
-                                    }
-                                    Err(why) => {
-                                        debug!("guild id result is err");
-                                        error!("{}", why);
-                                    }
+                    match guild_id.parse::<u64>() {
+                        Ok(guild_id) => {
+                            debug!("guild id result is ok");
+                            match context_repopulate_guild_queue(&ctx, GuildId(guild_id)).await {
+                                Some(_songbird_arc) => {
+                                    debug!("songbird arc option is some");
+                                }
+                                None => {
+                                    debug!("songbird arc option is none");
                                 }
                             }
                         }
-                        None => {
-                            debug!("guild_is_subscribed option is none");
+                        Err(why) => {
+                            debug!("guild id result is err");
+                            error!("{}", why);
                         }
                     }
                 }
@@ -114,6 +97,40 @@ impl EventHandler for Handler {
                 debug!("guild ids option is none");
             }
         }
+    }
+
+    async fn voice_state_update(&self, _ctx: Context, old: Option<VoiceState>, _new: VoiceState) {
+        match old {
+            Some(voice_state) => {
+                if voice_state.user_id == _ctx.cache.current_user().id {
+                    let old_voice_channel_id = voice_state.channel_id;
+                    let new_voice_channel_id = _new.channel_id;
+                    info!("rexmit was in {:?}", old_voice_channel_id);
+                    info!("rexmit is now in {:?}", new_voice_channel_id);
+                    // idea being to update the database with new voice channel id
+                    // as well as the songbird manager
+                    // maybe it makes sense to remove the songbird manager and then requeue everything on a new songbird manager
+                }
+            }
+            None => {}
+        };
+        /*let channel_result = _ctx.http.get_channel(_new.channel_id.unwrap().into()).await;
+        match channel_result.unwrap().guild() {
+            Some(guild_channel) => {
+                let members_result = guild_channel.members(&_ctx.cache).await;
+                match members_result {
+                    Ok(members) => {
+                        println!("{}", members.len())
+                    },
+                    Err(why) => {
+                        println!("{}", why);
+                    }
+                }
+            },
+            None => {
+                println!("{}", "no guild")
+            }
+        };*/
     }
 
     /*async fn voice_state_update(&self, _ctx: Context, _old: Option<VoiceState>, _new: VoiceState) {

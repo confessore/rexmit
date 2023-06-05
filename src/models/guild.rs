@@ -64,7 +64,7 @@ impl Guild {
         }
     }
 
-    pub fn is_subscribed(&self) -> bool {
+    pub fn has_reservation(&self) -> bool {
         return self.expiration > Utc::now();
     }
 }

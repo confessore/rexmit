@@ -1,6 +1,6 @@
 [package]
 name = "rexmit"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -12,9 +12,6 @@ tracing-futures = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_derive = "1.0"
 serde_json = "1.0"
-reqwest = { version = "0.11", features = ["json"] }
-bcrypt = "0.10"
-dotenv = "0.15.0"
 mongodb = "2.1.0"
 chrono = "0.4.24"
 

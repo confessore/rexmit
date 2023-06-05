@@ -1,11 +1,19 @@
-use rexmit::{command::GENERAL_GROUP, handler::Handler};
+use crate::{command::GENERAL_GROUP, handler::Handler};
 use serenity::{client::Client, framework::StandardFramework, prelude::GatewayIntents};
 use songbird::SerenityInit;
 use std::env;
 use tracing::Level;
 
+pub mod command;
+pub mod context;
+pub mod database;
+pub mod functions;
+pub mod handler;
+pub mod models;
+
 #[tokio::main]
 async fn main() {
+    // storm better way to account for debug environment variables
     let debug = env::var("DEBUG").expect("Expected a DEBUG == to 1 or 0 in the environment");
     let mut log_level = Level::INFO;
     if debug == "1" {
