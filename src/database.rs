@@ -2,13 +2,10 @@ use std::env;
 
 use chrono::{DateTime, Utc};
 use mongodb::{bson::doc, Client as MongoClient, Collection, Database};
-use serenity::{
-    model::prelude::{ChannelId, GuildId},
-    prelude::Context,
-};
+use serenity::model::prelude::GuildId;
 use tracing::{debug, error};
 
-use crate::{command::check_msg, context::context_boot_guild, models::guild::Guild};
+use crate::models::guild::Guild;
 
 /// gets the rexmit database from mongo
 ///
