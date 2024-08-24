@@ -397,3 +397,5 @@ yarn-error.log*
 next-env.d.ts
 
 /data
+/postgres
+/s3

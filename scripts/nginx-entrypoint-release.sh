@@ -9,7 +9,9 @@ then
         --nginx \
         --register-unsafely-without-email \
         --agree-tos \
-        -d rexmit.balasolu.com
+        -d rexmit.balasolu.com \
+        -d s3.rexmit.balasolu.com \
+        -d api.s3.rexmit.balasolu.com
     echo "SSL Certificate Generated!"
     echo "Copying SSL Config..."
     cp /nginx-release.conf /etc/nginx/nginx.conf
