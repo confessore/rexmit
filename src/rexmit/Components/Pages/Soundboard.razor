@@ -15,6 +15,7 @@
 
 
 <MudButton Color="MudBlazor.Color.Primary" @onclick="async () => await OkBabyByeBye()">Ok Baby Bye Bye</MudButton>
+<MudButton Color="MudBlazor.Color.Primary" @onclick="async () => await Okaaay()">Okaaay</MudButton>
 
 @code {
 
@@ -55,8 +56,30 @@
                 channel = (user as IGuildUser)?.VoiceChannel.Id;
                 var audioClient = await voiceChannel.ConnectAsync();
                 await FFmpegService.SendFFmpegAsync(audioClient, "./okbabybyebye.mp3");
+                await voiceChannel.DisconnectAsync();
             }
         }
     }
     
+    private async Task Okaaay()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        Console.WriteLine(authState);
+        var nameIdentifier = authState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
+        if (nameIdentifier is not null)
+        {
+            Console.WriteLine(nameIdentifier);
+            var user = DiscordShardedClient.GetGuild(900113002198626337).GetUser(Convert.ToUInt64(nameIdentifier.Value));
+            if (user is not null)
+            {
+                Console.WriteLine(user);
+                name = user.GlobalName;
+                var voiceChannel = (user as IGuildUser)?.VoiceChannel;
+                channel = (user as IGuildUser)?.VoiceChannel.Id;
+                var audioClient = await voiceChannel.ConnectAsync();
+                await FFmpegService.SendFFmpegAsync(audioClient, "./okaaay.mp3");
+                await voiceChannel.DisconnectAsync();
+            }
+        }
+    }
 }
