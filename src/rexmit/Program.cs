@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Balanced Solutions Software. All Rights Reserved. Licensed under the MIT license. See LICENSE in the project root for license information.
 
 using System;
+using Amazon.S3;
 using AspNet.Security.OAuth.Discord;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
@@ -77,6 +78,20 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 });
 
+IAmazonS3 amazonS3Client = new AmazonS3Client(
+    Environment.GetEnvironmentVariable("S3_ACCESS_KEY_ID")
+            ?? builder.Configuration.GetValue<string>("S3_ACCESS_KEY_ID"),
+    Environment.GetEnvironmentVariable("S3_ACCESS_KEY_SECRET")
+            ?? builder.Configuration.GetValue<string>("S3_ACCESS_KEY_SECRET"),
+    new AmazonS3Config()
+    {
+        ServiceURL = Environment.GetEnvironmentVariable("S3_ENDPOINT")
+            ?? builder.Configuration.GetValue<string>("S3_ENDPOINT"),
+        ForcePathStyle = true
+    }
+    );
+
+builder.Services.AddSingleton<AmazonS3Client>();
 builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<CircuitHandler, UserCircuitHandler>());
 
 var app = builder.Build();
