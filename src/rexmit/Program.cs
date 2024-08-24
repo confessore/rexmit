@@ -91,7 +91,7 @@ IAmazonS3 amazonS3Client = new AmazonS3Client(
     }
     );
 
-builder.Services.AddSingleton<AmazonS3Client>();
+builder.Services.AddSingleton(amazonS3Client);
 builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<CircuitHandler, UserCircuitHandler>());
 
 var app = builder.Build();

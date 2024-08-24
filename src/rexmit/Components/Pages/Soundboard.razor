@@ -1,4 +1,5 @@
 @page "/soundboard"
+@using Amazon.S3
 @using Microsoft.AspNetCore.Authorization
 @using Discord
 @using Discord.WebSocket
@@ -12,6 +13,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject DiscordShardedClient DiscordShardedClient
 @inject FFmpegService FFmpegService
+@inject IAmazonS3 AmazonS3
 
 
 <MudButton Color="MudBlazor.Color.Primary" @onclick="async () => await OkBabyByeBye()">Ok Baby Bye Bye</MudButton>
@@ -26,6 +28,9 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+        var keys = await AmazonS3.GetAllObjectKeysAsync("rexmit", "", null);
+        foreach (var key in keys)
+            Console.WriteLine(key);
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var nameIdentifier = authState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
         if (nameIdentifier is not null)
