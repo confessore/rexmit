@@ -13,9 +13,8 @@
 @inject DiscordShardedClient DiscordShardedClient
 @inject FFmpegService FFmpegService
 
-<div>
-    <button @onclick="async () => await OkBabyByeBye()">Ok Baby Bye Bye</button>
-</div>
+
+<MudButton Color="MudBlazor.Color.Default" @onclick="async () => await OkBabyByeBye()">Ok Baby Bye Bye</MudButton>
 
 @code {
 
