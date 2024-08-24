@@ -9,15 +9,19 @@
 @inject DiscordShardedClient DiscordShardedClient
 @inject FFmpegService FFmpegService
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<MudThemeProvider/>
+<MudPopoverProvider/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-                        <AuthorizeView>
+<MudLayout>
+    <MudAppBar>
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="@MudBlazor.Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        rexmit
+    </MudAppBar>
+    <MudDrawer @bind-Open="@_drawerOpen">
+        <NavMenu/>
+        <AuthorizeView>
             <Authorized>
                 <a href="#">Hello, @context.User.Identity.Name!</a>
                 <a href="#">@name</a>
@@ -29,13 +33,11 @@
                     <a href="Authentication/Login">Log in</a>
             </NotAuthorized>
         </AuthorizeView>
-        </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+    </MudDrawer>
+    <MudMainContent>
+        @Body
+    </MudMainContent>
+</MudLayout>
 
 <div id="blazor-error-ui">
     An unhandled error has occurred.
@@ -45,6 +47,12 @@
 
 
 @code {
+    bool _drawerOpen = true;
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
 
     private string name = string.Empty;
     private ulong? channel = 0;

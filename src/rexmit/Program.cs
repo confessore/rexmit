@@ -12,8 +12,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using MudBlazor.Services;
 using rexmit;
-using rexmit.Components;
 using rexmit.Contexts;
 using rexmit.Extensions;
 using rexmit.Services;
@@ -22,6 +22,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddMudServices();
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.ConfigureSignalR();
@@ -107,7 +108,7 @@ app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+app.MapRazorComponents<rexmit.Components.App>().AddInteractiveServerRenderMode();
 app.MapControllers();
 
 await app.StartDiscordBotAsync();

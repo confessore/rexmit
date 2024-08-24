@@ -88,31 +88,31 @@ public class InteractionModule(
         await ffmpegService.SendFFmpegAsync(client, "./okbabybyebye.mp3");
         await channel.DisconnectAsync();
 
-                /*var threadHandler = threadHandlerService.ThreadHandlers.FirstOrDefault(x => x.ChannelId == channel.Id);
-        if (threadHandler == null)
-        {
-            var currentUser = Context.Guild.GetUser(Context.Client.CurrentUser.Id);
-            if (currentUser.VoiceState?.VoiceChannel == null)
-            {
-                var client = await channel.ConnectAsync();
-                threadHandler = new ThreadHandler(this, ffmpegService, client);
+        /*var threadHandler = threadHandlerService.ThreadHandlers.FirstOrDefault(x => x.ChannelId == channel.Id);
+if (threadHandler == null)
+{
+    var currentUser = Context.Guild.GetUser(Context.Client.CurrentUser.Id);
+    if (currentUser.VoiceState?.VoiceChannel == null)
+    {
+        var client = await channel.ConnectAsync();
+        threadHandler = new ThreadHandler(this, ffmpegService, client);
 
-                threadHandler.OnTrackStart += () =>
-                {
-                    Console.WriteLine("TRACK START");
-                };
-                threadHandler.OnTrackEnd += () =>
-                {
-                    Console.WriteLine("TRACK END");
-                };
-                threadHandlerService.ThreadHandlers.Add(threadHandler);
-                threadHandler.Queue("./okbabybyebye.mp3");
-            }
-        }
-        else
+        threadHandler.OnTrackStart += () =>
         {
-            threadHandler.Queue("./okbabybyebye.mp3");
-        }*/
+            Console.WriteLine("TRACK START");
+        };
+        threadHandler.OnTrackEnd += () =>
+        {
+            Console.WriteLine("TRACK END");
+        };
+        threadHandlerService.ThreadHandlers.Add(threadHandler);
+        threadHandler.Queue("./okbabybyebye.mp3");
+    }
+}
+else
+{
+    threadHandler.Queue("./okbabybyebye.mp3");
+}*/
         // For the next step with transmitting audio, you would want to pass this Audio Client in to a service.
         await FollowupAsync($"ok baby bye bye");
     }
