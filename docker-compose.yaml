@@ -1,0 +1,48 @@
+services:
+
+  postgres:
+    image: postgres
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
+    restart: always
+
+  rexmit:
+    depends_on:
+      - postgres
+    build:
+      context: .
+      dockerfile: rexmit.debug.Dockerfile
+      target: final-rexmit
+    ports:
+      - 5000:5000
+    environment:
+      - POSTGRES_URL=${POSTGRES_URL}
+      - REDIS_URL=${REDIS_URL}
+      - DISCORD_CLIENTID=${DISCORD_CLIENTID}
+      - DISCORD_CLIENTSECRET=${DISCORD_CLIENTSECRET}
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - GPT_SECRET=${GPT_SECRET}
+    restart: always
+
+  nginx:
+    depends_on:
+      - rexmit
+    build:
+      context: .
+      dockerfile: nginx.debug.Dockerfile
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./etc/openssl:/etc/ssl
+    restart: always
