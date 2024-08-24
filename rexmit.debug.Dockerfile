@@ -27,5 +27,6 @@ RUN --mount=type=cache,target=/root/.nuget/packages \
 FROM base AS final-rexmit
 COPY src/rexmit/okbabybyebye.mp3 ./okbabybyebye.mp3
 COPY src/rexmit/okaaay.mp3 ./okaaay.mp3
+COPY src/rexmit/sigh.mp3 ./sigh.mp3
 COPY --from=publish-rexmit /app .
 ENTRYPOINT ["dotnet", "rexmit.dll", "--urls", "http://[::]:5000"]
