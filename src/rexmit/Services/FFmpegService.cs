@@ -32,7 +32,7 @@ public partial class FFmpegService
     public Process CreateCurlStream(string videoUrl)
     {
         var url =
-            $"-c \"curl -L -k {videoUrl} | ffmpeg -hide_banner -loglevel panic -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1\"";
+            $"-c \"streamlink {videoUrl} best -O | ffmpeg -hide_banner -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1\"";
         Console.WriteLine(url);
         var info = new ProcessStartInfo()
         {
