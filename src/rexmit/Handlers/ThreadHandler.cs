@@ -33,35 +33,25 @@ public class ThreadHandler
     public event Action OnTrackStart;
     public event Action OnTrackEnd;
     private List<string> _queue;
-    private object _lock = new object();
 
     public void Queue(string url)
     {
-        lock (_lock)
-        {
             _queue ??= [];
             _queue.Add(url);
-        }
         StartThread();
     }
 
     public void Dequeue()
     {
-        lock (_lock)
-        {
             _queue ??= [];
             _queue.RemoveAt(_queue.Count - 1);
-        }
         StartThread();
     }
 
     public void Skip()
     {
-        lock ( _lock)
-        {
             _queue ??= [];
             _queue.RemoveAt(0);
-        }
         _cancellationTokenSource.Cancel();
         _started = false;
         StartThread();
@@ -69,11 +59,8 @@ public class ThreadHandler
 
     public void Insert(string url)
     {
-        lock (_lock)
-        {
             _queue ??= [];
             _queue.Insert(1, url);
-        }
         StartThread();
     }
 
@@ -84,7 +71,7 @@ public class ThreadHandler
         {
             _started = true;
             _cancellationTokenSource = new CancellationTokenSource();
-            _thread = new Thread(async () => await ThreadWork(_cancellationTokenSource.Token));
+            _thread = new Thread(async () => await ThreadWorkAsync(_cancellationTokenSource.Token));
             _thread.Start();
             Console.WriteLine("Thread started.");
         }
@@ -109,7 +96,7 @@ public class ThreadHandler
     }
 
     // The work that the thread will perform
-    private async Task ThreadWork(CancellationToken token)
+    private async Task ThreadWorkAsync(CancellationToken token)
     {
         try
         {
@@ -120,11 +107,15 @@ public class ThreadHandler
                 OnTrackStart?.Invoke();
                 //await _interactionModule.Context.Channel.SendMessageAsync($"Now playing {_queue[0]}");
                 await _ffmpegService.SendFFmpegAsync(_audioClient, _queue[0], token);
-                lock (_lock)
+                if (_queue.Count > 0)
                 {
                     _queue.RemoveAt(0);
+                    OnTrackEnd?.Invoke();
                 }
-                OnTrackEnd?.Invoke();
+                else
+                {
+                    StopThread();
+                }
             }
         }
         catch (OperationCanceledException)
@@ -135,7 +126,7 @@ public class ThreadHandler
         {
             if (_queue.Count == 0)
             {
-                StopThread();
+                //StopThread();
             }
         }
     }

@@ -18,6 +18,7 @@
 @inject FFmpegService FFmpegService
 @inject IAmazonS3 AmazonS3
 @inject ThreadHandlerService ThreadHandlerService
+@inject AudioHandlerService AudioHandlerService
 
 
 <MudButton Color="MudBlazor.Color.Primary" @onclick="async () => await OkBabyByeBye()">Ok Baby Bye Bye</MudButton>
@@ -72,31 +73,23 @@
             if (user is not null)
             {
                 var userVoiceChannel = user.VoiceState?.VoiceChannel;
-                var threadHandler = ThreadHandlerService.ThreadHandlers.FirstOrDefault(x => x.VoiceChannelId == userVoiceChannel.Id);
-                if (threadHandler == null)
+                if (userVoiceChannel is not null)
                 {
-                    var currentUser = guild.GetUser(DiscordShardedClient.CurrentUser.Id);
-                    if (currentUser.VoiceState?.VoiceChannel == null)
+                    var audioHandler = AudioHandlerService.AudioHandlers.FirstOrDefault(x => x.VoiceChannelId == userVoiceChannel.Id);
+                    if (audioHandler is not null)
+                    {
+                        Console.WriteLine("got handle");
+                        await audioHandler.PlayAudioAsync("./okbabybyebye.mp3");
+                    }
+                    else
                     {
                         var voice = user.VoiceState?.VoiceChannel;
                         var client = await voice.ConnectAsync();
-                        threadHandler = new ThreadHandler(voice.Id, FFmpegService, client);
+                        audioHandler = new AudioHandler(voice.Id, FFmpegService, client);
 
-                        threadHandler.OnTrackStart += () =>
-                        {
-                            Console.WriteLine("TRACK START");
-                        };
-                        threadHandler.OnTrackEnd += () =>
-                        {
-                            Console.WriteLine("TRACK END");
-                        };
-                        ThreadHandlerService.ThreadHandlers.Add(threadHandler);
-                        threadHandler.Queue("./okbabybyebye.mp3");
+                        await audioHandler.PlayAudioAsync("./okbabybyebye.mp3");
+                        AudioHandlerService.AudioHandlers.Add(audioHandler);
                     }
-                }
-                else
-                {
-                    threadHandler.Queue("./okbabybyebye.mp3");
                 }
             }
         }

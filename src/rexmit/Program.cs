@@ -72,6 +72,7 @@ builder
 
 builder.Services.AddSingleton<FFmpegService>();
 builder.Services.AddSingleton<ThreadHandlerService>();
+builder.Services.AddSingleton<AudioHandlerService>();
 builder.Services.ConfigureDiscordBot();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
