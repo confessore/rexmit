@@ -4,6 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Discord.Audio;
+using Discord.WebSocket;
 using rexmit.Services;
 
 namespace rexmit.Handlers
@@ -34,7 +35,7 @@ namespace rexmit.Handlers
             using var output = ffmpeg.StandardOutput.BaseStream;
             if (AudioOutStream is null)
             {
-                using var discord = client.CreatePCMStream(AudioApplication.Mixed);
+                var discord = client.CreatePCMStream(AudioApplication.Mixed);
                 try
                 {
                     AudioOutStream = discord;
@@ -63,7 +64,7 @@ namespace rexmit.Handlers
             using var output = ffmpeg.StandardOutput.BaseStream;
             if (AudioOutStream is null)
             {
-                using var discord = client.CreatePCMStream(AudioApplication.Mixed);
+                var discord = client.CreatePCMStream(AudioApplication.Mixed);
                 try
                 {
                     AudioOutStream = discord;
