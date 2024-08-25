@@ -12,7 +12,7 @@ namespace rexmit.Modules;
 // A display of portability, which shows how minimal the difference between the 2 frameworks is.
 public class InteractionModule(
     FFmpegService ffmpegService,
-    ThreadHandlerService threadHandlerService
+    AudioHandlerService audioHandlerService
 ) : InteractionModuleBase<ShardedInteractionContext>
 {
     [SlashCommand("completion", "chat completion")]

@@ -40,7 +40,7 @@ namespace rexmit.Services
                     if (audioHandler is not null)
                     {
                         Console.WriteLine("got handle");
-                        await audioHandler.PlayAudioAsync(path);
+                        audioHandler.Queue(path);
                     }
                     else
                     {
@@ -48,7 +48,7 @@ namespace rexmit.Services
                         var client = await voice.ConnectAsync();
                         audioHandler = new AudioHandler(voice.Id, _ffmpegService, client);
 
-                        await audioHandler.PlayAudioAsync(path);
+                        audioHandler.Queue(path);
                         AudioHandlers.Add(audioHandler);
                     }
                 }

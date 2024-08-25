@@ -72,7 +72,6 @@ builder
 
 builder.Services.AddSingleton<DiscordService>();
 builder.Services.AddSingleton<FFmpegService>();
-builder.Services.AddSingleton<ThreadHandlerService>();
 builder.Services.AddSingleton<AudioHandlerService>();
 builder.Services.ConfigureDiscordBot();
 
