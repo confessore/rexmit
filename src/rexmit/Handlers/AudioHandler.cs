@@ -163,13 +163,12 @@ public class AudioHandler
             while (!token.IsCancellationRequested)
             {
                 Console.WriteLine("Thread is working...");
-
-                OnTrackStart?.Invoke();
-                //await _interactionModule.Context.Channel.SendMessageAsync($"Now playing {_queue[0]}");
-                await PlayAudioAsync(_queue[0], token);
                 if (_queue.Count > 0)
                 {
-                    _queue.RemoveAt(0);
+                    OnTrackStart?.Invoke();
+                    //await _interactionModule.Context.Channel.SendMessageAsync($"Now playing {_queue[0]}");
+                    await PlayAudioAsync(_queue[0], token);
+                    Dequeue();
                     OnTrackEnd?.Invoke();
                 }
                 else
