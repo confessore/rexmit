@@ -1,8 +1,6 @@
 ﻿// Copyright (c) Balanced Solutions Software. All Rights Reserved. Licensed under the MIT license. See LICENSE in the project root for license information.
 
 using System;
-using Amazon.Runtime;
-using System.Net.Http;
 using Amazon.S3;
 using AspNet.Security.OAuth.Discord;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -19,8 +17,8 @@ using MudBlazor.Services;
 using rexmit;
 using rexmit.Contexts;
 using rexmit.Extensions;
-using rexmit.Services;
 using rexmit.Factories;
+using rexmit.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -83,17 +81,19 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 IAmazonS3 amazonS3Client = new AmazonS3Client(
     Environment.GetEnvironmentVariable("S3_ACCESS_KEY_ID")
-            ?? builder.Configuration.GetValue<string>("S3_ACCESS_KEY_ID"),
+        ?? builder.Configuration.GetValue<string>("S3_ACCESS_KEY_ID"),
     Environment.GetEnvironmentVariable("S3_ACCESS_KEY_SECRET")
-            ?? builder.Configuration.GetValue<string>("S3_ACCESS_KEY_SECRET"),
+        ?? builder.Configuration.GetValue<string>("S3_ACCESS_KEY_SECRET"),
     new AmazonS3Config()
     {
-        ServiceURL = Environment.GetEnvironmentVariable("S3_ENDPOINT")
+        ServiceURL =
+            Environment.GetEnvironmentVariable("S3_ENDPOINT")
             ?? builder.Configuration.GetValue<string>("S3_ENDPOINT"),
         ForcePathStyle = true,
         HttpClientFactory = new AmazonS3HttpClientFactory()
     }
-    ); ;
+);
+;
 
 builder.Services.AddSingleton(amazonS3Client);
 builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<CircuitHandler, UserCircuitHandler>());

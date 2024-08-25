@@ -12,21 +12,20 @@ namespace rexmit.Handlers;
 
 public class ThreadHandler
 {
-    private readonly InteractionModule _interactionModule;
     private readonly FFmpegService _ffmpegService;
 
     public ThreadHandler(
-        InteractionModule interactionModule,
+        ulong voiceChannelId,
         FFmpegService ffmpegService,
         IAudioClient client
     )
     {
         _ffmpegService = ffmpegService;
         _audioClient = client;
-        ChannelId = interactionModule.Context.Channel.Id;
+        VoiceChannelId = voiceChannelId;
     }
 
-    public ulong ChannelId { get; }
+    public ulong VoiceChannelId { get; }
     private bool _started;
     public IAudioClient _audioClient;
     private Thread _thread;
@@ -34,25 +33,35 @@ public class ThreadHandler
     public event Action OnTrackStart;
     public event Action OnTrackEnd;
     private List<string> _queue;
+    private object _lock = new object();
 
     public void Queue(string url)
     {
-        _queue ??= [];
-        _queue.Add(url);
+        lock (_lock)
+        {
+            _queue ??= [];
+            _queue.Add(url);
+        }
         StartThread();
     }
 
     public void Dequeue()
     {
-        _queue ??= [];
-        _queue.RemoveAt(_queue.Count - 1);
+        lock (_lock)
+        {
+            _queue ??= [];
+            _queue.RemoveAt(_queue.Count - 1);
+        }
         StartThread();
     }
 
     public void Skip()
     {
-        _queue ??= [];
-        _queue.RemoveAt(0);
+        lock ( _lock)
+        {
+            _queue ??= [];
+            _queue.RemoveAt(0);
+        }
         _cancellationTokenSource.Cancel();
         _started = false;
         StartThread();
@@ -60,8 +69,11 @@ public class ThreadHandler
 
     public void Insert(string url)
     {
-        _queue ??= [];
-        _queue.Insert(1, url);
+        lock (_lock)
+        {
+            _queue ??= [];
+            _queue.Insert(1, url);
+        }
         StartThread();
     }
 
@@ -70,6 +82,7 @@ public class ThreadHandler
     {
         if (!_started)
         {
+            _started = true;
             _cancellationTokenSource = new CancellationTokenSource();
             _thread = new Thread(async () => await ThreadWork(_cancellationTokenSource.Token));
             _thread.Start();
@@ -100,7 +113,6 @@ public class ThreadHandler
     {
         try
         {
-            _started = true;
             while (!token.IsCancellationRequested)
             {
                 Console.WriteLine("Thread is working...");
@@ -108,12 +120,11 @@ public class ThreadHandler
                 OnTrackStart?.Invoke();
                 //await _interactionModule.Context.Channel.SendMessageAsync($"Now playing {_queue[0]}");
                 await _ffmpegService.SendFFmpegAsync(_audioClient, _queue[0], token);
-                _queue.RemoveAt(0);
-                OnTrackEnd?.Invoke();
-                if (_queue.Count == 0)
+                lock (_lock)
                 {
-                    StopThread();
+                    _queue.RemoveAt(0);
                 }
+                OnTrackEnd?.Invoke();
             }
         }
         catch (OperationCanceledException)
@@ -126,13 +137,6 @@ public class ThreadHandler
             {
                 StopThread();
             }
-            else
-            {
-                StopThread();
-                StartThread();
-            }
-
-            Console.WriteLine("Thread has stopped.");
         }
     }
 }
