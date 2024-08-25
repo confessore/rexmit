@@ -25,6 +25,21 @@ public partial class FFmpegService
         return Process.Start(info) ?? default!;
     }
 
+    public Process CreateCurlStream(string videoUrl)
+    {
+        var url =
+            $"-c \"curl -L -k {videoUrl} | ffmpeg -hide_banner -loglevel panic -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1\"";
+        Console.WriteLine(url);
+        var info = new ProcessStartInfo()
+        {
+            FileName = "/bin/bash",
+            Arguments = url,
+            UseShellExecute = false,
+            RedirectStandardOutput = true
+        };
+        return Process.Start(info) ?? default!;
+    }
+
     public Process CreateFFmpegStream(string path)
     {
         var url =
@@ -84,6 +99,24 @@ public partial class FFmpegService
     {
         // Create FFmpeg using the previous example
         using var ffmpeg = CreateYTDLPStream(path);
+        using var output = ffmpeg.StandardOutput.BaseStream;
+        using var discord = client.CreatePCMStream(AudioApplication.Mixed);
+        try
+        {
+            await output.CopyToAsync(discord);
+            Console.WriteLine("copied to output");
+        }
+        finally
+        {
+            await discord.FlushAsync();
+            Console.WriteLine("flushed");
+        }
+    }
+
+    public async Task SendCurlAsync(IAudioClient client, string path)
+    {
+        // Create FFmpeg using the previous example
+        using var ffmpeg = CreateCurlStream(path);
         using var output = ffmpeg.StandardOutput.BaseStream;
         using var discord = client.CreatePCMStream(AudioApplication.Mixed);
         try

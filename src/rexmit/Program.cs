@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Balanced Solutions Software. All Rights Reserved. Licensed under the MIT license. See LICENSE in the project root for license information.
 
 using System;
+using Amazon.Runtime;
+using System.Net.Http;
 using Amazon.S3;
 using AspNet.Security.OAuth.Discord;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -18,6 +20,7 @@ using rexmit;
 using rexmit.Contexts;
 using rexmit.Extensions;
 using rexmit.Services;
+using rexmit.Factories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -87,9 +90,10 @@ IAmazonS3 amazonS3Client = new AmazonS3Client(
     {
         ServiceURL = Environment.GetEnvironmentVariable("S3_ENDPOINT")
             ?? builder.Configuration.GetValue<string>("S3_ENDPOINT"),
-        ForcePathStyle = true
+        ForcePathStyle = true,
+        HttpClientFactory = new AmazonS3HttpClientFactory()
     }
-    );
+    ); ;
 
 builder.Services.AddSingleton(amazonS3Client);
 builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<CircuitHandler, UserCircuitHandler>());

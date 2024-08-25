@@ -21,6 +21,7 @@ services:
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     volumes:
       - ./s3:/data
+      - ./etc/openssl:/root/.minio/certs
     restart: always
 
   redis:
@@ -32,6 +33,7 @@ services:
   rexmit:
     depends_on:
       - postgres
+      - s3
     build:
       context: .
       dockerfile: rexmit.debug.Dockerfile
@@ -53,6 +55,7 @@ services:
   nginx:
     depends_on:
       - rexmit
+      - s3
     build:
       context: .
       dockerfile: nginx.debug.Dockerfile

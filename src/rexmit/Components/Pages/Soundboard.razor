@@ -1,5 +1,6 @@
 @page "/soundboard"
 @using Amazon.S3
+@using Amazon.S3.Model
 @using Microsoft.AspNetCore.Authorization
 @using Discord
 @using Discord.WebSocket
@@ -28,9 +29,6 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        var keys = await AmazonS3.GetAllObjectKeysAsync("rexmit", "", null);
-        foreach (var key in keys)
-            Console.WriteLine(key);
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var nameIdentifier = authState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
         if (nameIdentifier is not null)
@@ -44,7 +42,7 @@
             }
         }
     }
-    
+
     private async Task OkBabyByeBye()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -69,22 +67,22 @@
     
     private async Task Okaaay()
     {
+        //var keys = await AmazonS3.GetAllObjectKeysAsync("rexmit", "", null);
+        //var file = await AmazonS3.GetObjectAsync("rexmit", "okbabybyebye.mp3");
+        var request = new GetPreSignedUrlRequest() { BucketName = "rexmit", Key = "okaybabybyebye.mp3", Expires = DateTime.Now.AddDays(7) };
+        var url = await AmazonS3.GetPreSignedURLAsync(request);
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        Console.WriteLine(authState);
         var nameIdentifier = authState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
         if (nameIdentifier is not null)
         {
-            Console.WriteLine(nameIdentifier);
             var user = DiscordShardedClient.GetGuild(900113002198626337).GetUser(Convert.ToUInt64(nameIdentifier.Value));
             if (user is not null)
             {
-                Console.WriteLine(user);
                 name = user.GlobalName;
                 var voiceChannel = (user as IGuildUser)?.VoiceChannel;
-                channel = (user as IGuildUser)?.VoiceChannel.Id;
+                channel = voiceChannel.Id;
                 var audioClient = await voiceChannel.ConnectAsync();
-                await FFmpegService.SendFFmpegAsync(audioClient, "./okaaay.mp3");
-                await voiceChannel.DisconnectAsync();
+                await FFmpegService.SendCurlAsync(audioClient, url);
             }
         }
     }
