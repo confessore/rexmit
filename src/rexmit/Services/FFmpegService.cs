@@ -32,7 +32,7 @@ public partial class FFmpegService
     public Process CreateCurlStream(string videoUrl)
     {
         var url =
-            $"-c \"streamlink {videoUrl} best -O | ffmpeg -hide_banner -i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1\"";
+            $"-c \"ffmpeg -hide_banner -i {videoUrl} -ac 2 -f s16le -ar 48000 pipe:1\"";
         Console.WriteLine(url);
         var info = new ProcessStartInfo()
         {
@@ -47,11 +47,11 @@ public partial class FFmpegService
     public Process CreateFFmpegStream(string path)
     {
         var url =
-            $"-c \"ffmpeg -hide_banner -loglevel panic -i {path} -ac 2 -f s16le -ar 48000 pipe:1\"";
+            $"-hide_banner -loglevel panic -i \"{path}\" -ac 2 -f s16le -ar 48000 pipe:1";
         Console.WriteLine(url);
         var info = new ProcessStartInfo()
         {
-            FileName = "/bin/bash",
+            FileName = "ffmpeg",
             Arguments = url,
             UseShellExecute = false,
             RedirectStandardOutput = true

@@ -30,39 +30,9 @@ public class AudioHandler
     private List<string> _queue;
     public AudioOutStream AudioOutStream { get; set; }
 
-    private async Task PlayCurlAsync(string path)
-    {
-        await SendCurlAsync(_audioClient, path);
-    }
-
     private async Task PlayAudioAsync(string path, CancellationToken cancellationToken)
     {
         await SendFFmpegAsync(_audioClient, path, cancellationToken);
-    }
-
-    private async Task SendCurlAsync(IAudioClient client, string path)
-    {
-        using var ffmpeg = _ffmpegService.CreateCurlStream(path);
-        using var output = ffmpeg.StandardOutput.BaseStream;
-        if (AudioOutStream is null)
-        {
-            var discord = client.CreatePCMStream(AudioApplication.Mixed);
-            try
-            {
-                AudioOutStream = discord;
-                await output.CopyToAsync(AudioOutStream);
-                Console.WriteLine("copied to output");
-            }
-            finally
-            {
-                //await discord.FlushAsync();
-                Console.WriteLine("flushed");
-            }
-        }
-        else
-        {
-            await output.CopyToAsync(AudioOutStream);
-        }
     }
 
     private async Task SendFFmpegAsync(IAudioClient client, string path)
@@ -192,7 +162,7 @@ public class AudioHandler
                 {
                     OnTrackStart?.Invoke();
                     //await _interactionModule.Context.Channel.SendMessageAsync($"Now playing {_queue[0]}");
-                    await PlayCurlAsync(_queue[0]);
+                    await PlayAudioAsync(_queue[0], token);
                     Dequeue();
                     OnTrackEnd?.Invoke();
                 }
