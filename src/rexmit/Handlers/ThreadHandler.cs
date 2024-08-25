@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Discord.Audio;
-using rexmit.Modules;
 using rexmit.Services;
 
 namespace rexmit.Handlers;
@@ -14,11 +13,7 @@ public class ThreadHandler
 {
     private readonly FFmpegService _ffmpegService;
 
-    public ThreadHandler(
-        ulong voiceChannelId,
-        FFmpegService ffmpegService,
-        IAudioClient client
-    )
+    public ThreadHandler(ulong voiceChannelId, FFmpegService ffmpegService, IAudioClient client)
     {
         _ffmpegService = ffmpegService;
         _audioClient = client;
@@ -36,22 +31,22 @@ public class ThreadHandler
 
     public void Queue(string url)
     {
-            _queue ??= [];
-            _queue.Add(url);
+        _queue ??= [];
+        _queue.Add(url);
         StartThread();
     }
 
     public void Dequeue()
     {
-            _queue ??= [];
-            _queue.RemoveAt(_queue.Count - 1);
+        _queue ??= [];
+        _queue.RemoveAt(_queue.Count - 1);
         StartThread();
     }
 
     public void Skip()
     {
-            _queue ??= [];
-            _queue.RemoveAt(0);
+        _queue ??= [];
+        _queue.RemoveAt(0);
         _cancellationTokenSource.Cancel();
         _started = false;
         StartThread();
@@ -59,8 +54,8 @@ public class ThreadHandler
 
     public void Insert(string url)
     {
-            _queue ??= [];
-            _queue.Insert(1, url);
+        _queue ??= [];
+        _queue.Insert(1, url);
         StartThread();
     }
 

@@ -7,6 +7,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Diagnostics
 @using System.Security.Claims
+@using System.Threading
 @using rexmit.Handlers
 @using rexmit.Modules
 @using rexmit.Services
@@ -64,35 +65,37 @@
 
     private async Task OkBabyByeBye()
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var nameIdentifier = authState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
-        if (nameIdentifier is not null)
-        {
-            var guild = GetGuildByUserId(nameIdentifier.Value);
-            var user = DiscordShardedClient.GetGuild(guild.Id).GetUser(Convert.ToUInt64(nameIdentifier.Value));
-            if (user is not null)
+        new Thread(async () => {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var nameIdentifier = authState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
+            if (nameIdentifier is not null)
             {
-                var userVoiceChannel = user.VoiceState?.VoiceChannel;
-                if (userVoiceChannel is not null)
+                var guild = GetGuildByUserId(nameIdentifier.Value);
+                var user = DiscordShardedClient.GetGuild(guild.Id).GetUser(Convert.ToUInt64(nameIdentifier.Value));
+                if (user is not null)
                 {
-                    var audioHandler = AudioHandlerService.AudioHandlers.FirstOrDefault(x => x.VoiceChannelId == userVoiceChannel.Id);
-                    if (audioHandler is not null)
+                    var userVoiceChannel = user.VoiceState?.VoiceChannel;
+                    if (userVoiceChannel is not null)
                     {
-                        Console.WriteLine("got handle");
-                        await audioHandler.PlayAudioAsync("./okbabybyebye.mp3");
-                    }
-                    else
-                    {
-                        var voice = user.VoiceState?.VoiceChannel;
-                        var client = await voice.ConnectAsync();
-                        audioHandler = new AudioHandler(voice.Id, FFmpegService, client);
+                        var audioHandler = AudioHandlerService.AudioHandlers.FirstOrDefault(x => x.VoiceChannelId == userVoiceChannel.Id);
+                        if (audioHandler is not null)
+                        {
+                            Console.WriteLine("got handle");
+                            await audioHandler.PlayAudioAsync("./okbabybyebye.mp3");
+                        }
+                        else
+                        {
+                            var voice = user.VoiceState?.VoiceChannel;
+                            var client = await voice.ConnectAsync();
+                            audioHandler = new AudioHandler(voice.Id, FFmpegService, client);
 
-                        await audioHandler.PlayAudioAsync("./okbabybyebye.mp3");
-                        AudioHandlerService.AudioHandlers.Add(audioHandler);
+                            await audioHandler.PlayAudioAsync("./okbabybyebye.mp3");
+                            AudioHandlerService.AudioHandlers.Add(audioHandler);
+                        }
                     }
                 }
             }
-        }
+        }).Start();
     }
 
     private async Task Sigh()

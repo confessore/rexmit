@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Balanced Solutions Software. All Rights Reserved. Licensed under the MIT license. See LICENSE in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +11,9 @@ namespace rexmit.Services;
 
 public partial class FFmpegService
 {
+    private readonly ConcurrentDictionary<ulong, AudioOutStream> cd =
+        new ConcurrentDictionary<ulong, AudioOutStream>();
+
     public Process CreateYTDLPStream(string videoUrl)
     {
         var url =
@@ -68,7 +72,7 @@ public partial class FFmpegService
         }
         finally
         {
-            await discord.FlushAsync();
+            //await discord.FlushAsync();
             Console.WriteLine("flushed");
         }
     }
@@ -90,7 +94,7 @@ public partial class FFmpegService
         }
         finally
         {
-            await discord.FlushAsync(cancellationToken);
+            //await discord.FlushAsync(cancellationToken);
             Console.WriteLine("flushed");
         }
     }
