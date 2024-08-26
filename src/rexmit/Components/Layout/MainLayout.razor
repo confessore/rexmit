@@ -1,0 +1,53 @@
+﻿@using Discord
+@using Discord.WebSocket
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Diagnostics
+@using System.Security.Claims
+@using rexmit.Services
+@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject DiscordShardedClient DiscordShardedClient
+@inject FFmpegService FFmpegService
+
+<MudThemeProvider/>
+<MudPopoverProvider/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
+
+<MudLayout>
+    <MudAppBar>
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="@MudBlazor.Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        rexmit
+    </MudAppBar>
+    <MudDrawer @bind-Open="@_drawerOpen">
+        <NavMenu/>
+        <AuthorizeView>
+            <Authorized>
+                <a href="#">Hello, @context.User.Identity.Name!</a>
+                <a href="Authentication/Logout">Log out</a>
+            </Authorized>
+            <NotAuthorized>
+                    <a href="Authentication/Login">Log in</a>
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudDrawer>
+    <MudMainContent>
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+
+@code {
+    bool _drawerOpen = true;
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}
