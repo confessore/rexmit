@@ -140,7 +140,7 @@ dotnet_naming_style.pascal_case_style.capitalization = pascal_case
 
 # IDE0073: File header
 dotnet_diagnostic.IDE0073.severity = warning
-file_header_template = Copyright (c) Balanced Solutions Software. All Rights Reserved. Licensed under the MIT license. See LICENSE in the project root for license information.
+file_header_template = rexmit retransmits audio to discord voice channels\n\nCopyright (C) 2024  Steven Confessore\nThis program is free software: you can redistribute it and/or modify\nit under the terms of the GNU Affero General Public License as\npublished by the Free Software Foundation, either version 3 of the\nLicense, or (at your option) any later version.\n\nThis program is distributed in the hope that it will be useful,\nbut WITHOUT ANY WARRANTY, without even the implied warranty of\nMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\nGNU Affero General Public License for more details.\n\nYou should have received a copy of the GNU Affero General Public License\nalong with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # IDE0035: Remove unreachable code
 dotnet_diagnostic.IDE0035.severity = warning

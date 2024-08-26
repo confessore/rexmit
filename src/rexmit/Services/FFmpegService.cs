@@ -1,4 +1,18 @@
-﻿// Copyright (c) Balanced Solutions Software. All Rights Reserved. Licensed under the MIT license. See LICENSE in the project root for license information.
+﻿// rexmit retransmits audio to discord voice channels
+//
+// Copyright (C) 2024  Steven Confessore
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY, without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
 using System.Collections.Concurrent;
@@ -31,8 +45,7 @@ public partial class FFmpegService
 
     public Process CreateCurlStream(string videoUrl)
     {
-        var url =
-            $"-c \"ffmpeg -hide_banner -i {videoUrl} -ac 2 -f s16le -ar 48000 pipe:1\"";
+        var url = $"-c \"ffmpeg -hide_banner -i {videoUrl} -ac 2 -f s16le -ar 48000 pipe:1\"";
         Console.WriteLine(url);
         var info = new ProcessStartInfo()
         {
@@ -46,8 +59,7 @@ public partial class FFmpegService
 
     public Process CreateFFmpegStream(string path)
     {
-        var url =
-            $"-hide_banner -loglevel panic -i \"{path}\" -ac 2 -f s16le -ar 48000 pipe:1";
+        var url = $"-hide_banner -loglevel panic -i \"{path}\" -ac 2 -f s16le -ar 48000 pipe:1";
         Console.WriteLine(url);
         var info = new ProcessStartInfo()
         {
