@@ -21,7 +21,11 @@
 @inject AudioHandlerService AudioHandlerService
 
 
-<MudButton Color="MudBlazor.Color.Primary" @onclick="async () => await OkBabyByeBye()">Ok Baby Bye Bye</MudButton>
+<!--<MudButton Color="MudBlazor.Color.Primary" @onclick="async () => await OkBabyByeBye()">Ok Baby Bye Bye</MudButton>-->
+@foreach (var objectKey in objectKeys)
+{
+    <MudButton Color="MudBlazor.Color.Primary" @onclick="async () => await PlayAudioAsync(objectKey)">@objectKey</MudButton>
+}
 
 @name
 @channel
@@ -30,6 +34,7 @@
 
     private string name = string.Empty;
     private ulong? channel = 0;
+    private IList<string> objectKeys = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -43,6 +48,8 @@
             //{
             //    Console.WriteLine($"{guild.Name} {guild.Id}");
             //}
+
+            objectKeys = await AmazonS3.GetAllObjectKeysAsync("rexmit", string.Empty, null);
             var guild = GetGuildByUserId(nameIdentifier.Value);
             var user = DiscordShardedClient.GetGuild(guild.Id).GetUser(Convert.ToUInt64(nameIdentifier.Value));
             if (user is not null)
@@ -69,7 +76,21 @@
             var nameIdentifier = authState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
             if (nameIdentifier is not null)
             {
-                var url = AmazonS3.GeneratePreSignedURL("rexmit", "sigh.mp3", DateTime.Now.AddDays(7), null);
+                var url = AmazonS3.GeneratePreSignedURL("rexmit", "okaaay.mp3", DateTime.Now.AddHours(1), null);
+                await AudioHandlerService.HandleAudio(nameIdentifier.Value, url);
+            }
+        }).Start();
+    }
+
+    private async Task PlayAudioAsync(string objectKey)
+    {
+        new Thread(async () =>
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var nameIdentifier = authState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
+            if (nameIdentifier is not null)
+            {
+                var url = AmazonS3.GeneratePreSignedURL("rexmit", objectKey, DateTime.Now.AddHours(1), null);
                 await AudioHandlerService.HandleAudio(nameIdentifier.Value, url);
             }
         }).Start();
