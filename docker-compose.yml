@@ -12,10 +12,7 @@ services:
 
   s3:
     image: quay.io/minio/minio
-    command:
-      cp /root/.minio/certs/cert.pem /root/.minio/certs/public.crt && \
-      cp /root/.minio/certs/privkey.pem /root/.minio/certs/private.key && \
-      server /data --console-address ":9001"
+    command: server /data --console-address ":9001"
     ports:
       - 9000:9000
       - 9001:9001
