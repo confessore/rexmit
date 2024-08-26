@@ -47,7 +47,11 @@ internal static class WebApplicationExtensions
         // Tokens should be considered secret data, and never hard-coded.
         await client.LoginAsync(TokenType.Bot, Environment.GetEnvironmentVariable("DISCORD_TOKEN"));
         await client.StartAsync();
-        await client.SetCustomStatusAsync("type /help for commands");
+#if !DEBUG
+        await client.SetCustomStatusAsync("rexmit.balasolu.com");
+#elif DEBUG
+        await client.SetCustomStatusAsync("carrington.balasolu.com");
+#endif
     }
 
     private static Task ReadyAsync(DiscordSocketClient shard)
