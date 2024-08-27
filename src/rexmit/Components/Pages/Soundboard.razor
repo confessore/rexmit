@@ -24,7 +24,7 @@
 <!--<MudButton Color="MudBlazor.Color.Primary" @onclick="async () => await OkBabyByeBye()">Ok Baby Bye Bye</MudButton>-->
 @foreach (var objectKey in objectKeys)
 {
-    <MudButton Color="MudBlazor.Color.Primary" @onclick="async () => await PlayAudioAsync(objectKey)">@objectKey</MudButton>
+    <MudButton Disabled="disabled" Color="MudBlazor.Color.Primary" @onclick="async () => await PlayAudioAsync(objectKey)">@objectKey</MudButton>
 }
 
 @name
@@ -35,6 +35,7 @@
     private string name = string.Empty;
     private ulong? channel = 0;
     private IList<string> objectKeys = [];
+        private bool disabled;
 
     protected override async Task OnInitializedAsync()
     {
@@ -84,16 +85,16 @@
 
     private async Task PlayAudioAsync(string objectKey)
     {
-        new Thread(async () =>
+        disabled = true;
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var nameIdentifier = authState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
+        if (nameIdentifier is not null)
         {
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            var nameIdentifier = authState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
-            if (nameIdentifier is not null)
-            {
-                var url = AmazonS3.GeneratePreSignedURL("rexmit", objectKey, DateTime.Now.AddHours(1), null);
-                await AudioHandlerService.HandleAudio(nameIdentifier.Value, url);
-            }
-        }).Start();
+            var url = AmazonS3.GeneratePreSignedURL("rexmit", objectKey, DateTime.Now.AddHours(1), null);
+            await AudioHandlerService.HandleAudio(nameIdentifier.Value, url);
+        }
+        await Task.Delay(1000);
+        disabled = false;
     }
 
     private async Task Sigh()
