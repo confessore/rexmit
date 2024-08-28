@@ -64,7 +64,7 @@ public class AudioHandler
             }
             finally
             {
-                //await discord.FlushAsync();
+                await discord.FlushAsync();
                 Console.WriteLine("flushed");
             }
         }
