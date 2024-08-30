@@ -14,29 +14,52 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using MediatR;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.Circuits;
+using rexmit.Commands;
 using rexmit.Models;
+using rexmit.Models.Interfaces;
+using rexmit.Queries;
 
 namespace rexmit;
 
-public sealed class UserCircuitHandler(AuthenticationStateProvider authenticationStateProvider)
+public sealed class UserCircuitHandler(AuthenticationStateProvider authenticationStateProvider, ISecurityActor securityActor, IMediator mediator)
     : CircuitHandler
 {
+    private readonly AuthenticationStateProvider _authenticationStateProvider = authenticationStateProvider;
+    private readonly ISecurityActor _securityActor = securityActor;
+    private readonly IMediator _mediator = mediator;
     public override async Task OnConnectionUpAsync(
         Circuit circuit,
         CancellationToken cancellationToken
     )
     {
-        var authenticationState = await authenticationStateProvider.GetAuthenticationStateAsync();
-            var securityActor = new SecurityActor();
-            var nameIdentifier = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
-        if (nameIdentifier is null)
+        var authenticationState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        var nameIdentifier = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
+        if (nameIdentifier is not null)
         {
-            securityActor.DiscordId = 0;
+            var id = Convert.ToUInt64(nameIdentifier.Value); 
+            var user = await _mediator.Send(new GetUserByIdQuery() { Id = id }, cancellationToken);
+            if (user is not null)
+            {
+                _securityActor.DiscordId = user.Id;
+                _securityActor.Name = user.Name;
+            }
+            else
+            {
+                var name = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
+                if (name is not null)
+                {
+                    user = new() { Id = id, Name = name.Value };
+                    await _mediator.Send(new AddUserCommand() { Id = id, Name = name.Value }, cancellationToken);
+                }
+            }
         }
     }
 

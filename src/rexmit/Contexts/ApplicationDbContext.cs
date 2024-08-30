@@ -16,6 +16,7 @@
 
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using rexmit.Models;
 
 namespace rexmit.Contexts;
 
@@ -24,6 +25,7 @@ public partial class ApplicationDbContext(DbContextOptions<ApplicationDbContext>
         IDataProtectionKeyContext
 {
     public virtual DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
+    public virtual DbSet<User> Users { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

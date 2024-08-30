@@ -1,6 +1,7 @@
 @page "/soundboard"
 @using Amazon.S3
 @using Amazon.S3.Model
+@using MediatR
 @using Microsoft.AspNetCore.Authorization
 @using Discord
 @using Discord.WebSocket
@@ -9,7 +10,9 @@
 @using System.Security.Claims
 @using System.Threading
 @using rexmit.Handlers
+@using rexmit.Models.Interfaces
 @using rexmit.Modules
+@using rexmit.Queries
 @using rexmit.Services
 
 @attribute [Authorize]
@@ -19,9 +22,10 @@
 @inject FFmpegService FFmpegService
 @inject IAmazonS3 AmazonS3
 @inject AudioHandlerService AudioHandlerService
+@inject IMediator _mediator
+@inject ISecurityActor SecurityActor
+@inject DiscordService _discordService
 
-
-<!--<MudButton Color="MudBlazor.Color.Primary" @onclick="async () => await OkBabyByeBye()">Ok Baby Bye Bye</MudButton>-->
 @foreach (var objectKey in objectKeys)
 {
     <MudButton Disabled="disabled" Color="MudBlazor.Color.Primary" @onclick="async () => await PlayAudioAsync(objectKey)">@objectKey</MudButton>
@@ -29,6 +33,7 @@
 
 @name
 @channel
+@id
 
 @code {
 
@@ -36,89 +41,40 @@
     private ulong? channel = 0;
     private IList<string> objectKeys = [];
         private bool disabled;
+        private ulong id = 5;
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var user = await _mediator.Send(new GetUserByIdQuery() { Id = SecurityActor.DiscordId });
+            id = user.Id;
+            StateHasChanged();
+        }
+    }
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var nameIdentifier = authState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
-        if (nameIdentifier is not null)
-        {
-            //var guilds = DiscordShardedClient.Guilds;
-            //foreach (var guild in guilds)
-            //{
-            //    Console.WriteLine($"{guild.Name} {guild.Id}");
-            //}
-
             objectKeys = await AmazonS3.GetAllObjectKeysAsync("rexmit", string.Empty, null);
-            var guild = GetGuildByUserId(nameIdentifier.Value);
+            var guild = _discordService.GetGuildByUserId(SecurityActor.DiscordId);
             if (guild is not null)
             {
-                var user = DiscordShardedClient.GetGuild(guild.Id).GetUser(Convert.ToUInt64(nameIdentifier.Value));
+                var user = DiscordShardedClient.GetGuild(guild.Id).GetUser(SecurityActor.DiscordId);
                 if (user is not null)
                 {
                     name = user.GlobalName;
                     var voiceChannel = (user as IGuildUser)?.VoiceChannel;
                     channel = voiceChannel?.Id;
                 }
-            }
         }
-    }
-
-    private SocketGuild GetGuildByUserId(string userId)
-    {
-        var guild = DiscordShardedClient.Guilds.FirstOrDefault(x =>
-            x.VoiceChannels.FirstOrDefault(y =>
-                y.Users.FirstOrDefault(z => z.Id == Convert.ToUInt64(userId)) != null) != null);
-        return guild;
-    }
-
-    private async Task OkBabyByeBye()
-    {
-        new Thread(async () => {
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            var nameIdentifier = authState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
-            if (nameIdentifier is not null)
-            {
-                var url = AmazonS3.GeneratePreSignedURL("rexmit", "okaaay.mp3", DateTime.Now.AddHours(1), null);
-                await AudioHandlerService.HandleAudio(nameIdentifier.Value, url);
-            }
-        }).Start();
     }
 
     private async Task PlayAudioAsync(string objectKey)
     {
         disabled = true;
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var nameIdentifier = authState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
-        if (nameIdentifier is not null)
-        {
-            var url = AmazonS3.GeneratePreSignedURL("rexmit", objectKey, DateTime.Now.AddHours(1), null);
-            await AudioHandlerService.HandleAudio(nameIdentifier.Value, url);
-        }
+        var url = AmazonS3.GeneratePreSignedURL("rexmit", objectKey, DateTime.Now.AddHours(1), null);
+        await AudioHandlerService.HandleAudio(SecurityActor.DiscordId, url);
         await Task.Delay(1000);
         disabled = false;
-    }
-
-    private async Task Sigh()
-    {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        Console.WriteLine(authState);
-        var nameIdentifier = authState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
-        if (nameIdentifier is not null)
-        {
-            Console.WriteLine(nameIdentifier);
-            var user = DiscordShardedClient.GetGuild(900113002198626337).GetUser(Convert.ToUInt64(nameIdentifier.Value));
-            if (user is not null)
-            {
-                Console.WriteLine(user);
-                name = user.GlobalName;
-                var voiceChannel = (user as IGuildUser)?.VoiceChannel;
-                channel = (user as IGuildUser)?.VoiceChannel.Id;
-                var audioClient = await voiceChannel.ConnectAsync();
-                await FFmpegService.SendFFmpegAsync(audioClient, "./sigh.mp3");
-                await voiceChannel.DisconnectAsync();
-            }
-        }
     }
 }

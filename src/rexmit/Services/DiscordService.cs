@@ -22,11 +22,11 @@ namespace rexmit.Services
 {
     public class DiscordService(DiscordShardedClient discordShardedClient)
     {
-        public SocketGuild? GetGuildByUserId(string userId)
+        public SocketGuild? GetGuildByUserId(ulong userId)
         {
             var guild = discordShardedClient.Guilds.FirstOrDefault(x =>
                 x.VoiceChannels.FirstOrDefault(y =>
-                    y.Users.FirstOrDefault(z => z.Id == Convert.ToUInt64(userId)) != null
+                    y.Users.FirstOrDefault(z => z.Id == userId) != null
                 ) != null
             );
             return guild;

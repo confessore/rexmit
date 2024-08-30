@@ -28,10 +28,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using MudBlazor.Services;
+using Npgsql.Replication;
 using rexmit;
 using rexmit.Contexts;
 using rexmit.Extensions;
 using rexmit.Factories;
+using rexmit.Models;
+using rexmit.Models.Interfaces;
 using rexmit.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -84,6 +87,9 @@ builder
             ?? builder.Configuration.GetValue<string>("DISCORD_CLIENTSECRET");
     });
 
+builder.Services.AddMediatR(configuration => configuration.RegisterServicesFromAssemblyContaining<Program>());
+builder.Services.AddSingleton<ISecurityActor, SecurityActor>();
+builder.Services.AddSingleton<UserService>();
 builder.Services.AddSingleton<DiscordService>();
 builder.Services.AddSingleton<FFmpegService>();
 builder.Services.AddSingleton<AudioHandlerService>();

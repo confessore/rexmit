@@ -20,5 +20,6 @@ namespace rexmit.Models;
 
 public class SecurityActor : ISecurityActor
 {
-    public ulong DiscordId { get; protected set; } = default;
+    public ulong DiscordId { get; set; } = default;
+    public string? Name { get; set; } = "Anonymous";
 }

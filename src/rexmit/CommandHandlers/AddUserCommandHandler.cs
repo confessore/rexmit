@@ -1,15 +1,20 @@
 using System.Threading;
 using System.Threading.Tasks;
+using MediatR;
 using rexmit.Commands;
-using rexmit.Models.Interfaces;
+using rexmit.Models;
+using rexmit.Services;
 
 namespace rexmit.CommandHandlers;
 
-public class AddUserCommandHandler : IRequestHandler<AddUserCommand, ulong>
+public class AddUserCommandHandler(UserService userService) : IRequestHandler<AddUserCommand, ulong>
 {
-    public Task<ulong> Handle(AddUserCommand request, CancellationToken cancellationToken)
+    private readonly UserService _userService = userService;
+
+    public async Task<ulong> Handle(AddUserCommand request, CancellationToken cancellationToken)
     {
-        ulong newUserId = 0; /* add logic to add a user to db */
-        return Task.FromResult(newUserId);
+        var user = new User() { Id = request.Id, Name = request.Name};
+        await _userService.UpsertUserAsync(user);
+        return user.Id;
     }
 }

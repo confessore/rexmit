@@ -43,7 +43,7 @@ namespace rexmit.Services
 
         public Collection<AudioHandler> AudioHandlers { get; set; }
 
-        public async Task HandleAudio(string userId, string path)
+        public async Task HandleAudio(ulong userId, string path)
         {
             var guild = _discordService.GetGuildByUserId(userId);
             var user = _discordShardedClient.GetGuild(guild.Id).GetUser(Convert.ToUInt64(userId));

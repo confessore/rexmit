@@ -1,3 +1,4 @@
+using MediatR;
 using rexmit.Models;
 using rexmit.Models.Interfaces;
 

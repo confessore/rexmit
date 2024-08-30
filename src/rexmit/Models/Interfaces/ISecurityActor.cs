@@ -18,5 +18,6 @@ namespace rexmit.Models.Interfaces;
 
 public interface ISecurityActor
 {
-    public ulong DiscordId { get; }
+    public ulong DiscordId { get; set; }
+    public string? Name { get; set; }
 }
