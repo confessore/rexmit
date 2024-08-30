@@ -40,21 +40,25 @@ internal static class WebApplicationExtensions
         return webApplication;
     }
 
+    private static WebApplication _webApplication;
+
     public static async Task StartDiscordBotAsync(this WebApplication webApplication)
     {
-        var client = webApplication.Services.GetRequiredService<DiscordShardedClient>();
+        _webApplication = webApplication;
+        var client = _webApplication.Services.GetRequiredService<DiscordShardedClient>();
 
         // The Sharded Client does not have a Ready event.
         // The ShardReady event is used instead, allowing for individual
         // control per shard.
         client.ShardReady += ReadyAsync;
         client.Log += LogAsync;
+        client.ShardDisconnected += ShardDisconnected;
 
-        await webApplication
+        await _webApplication
             .Services.GetRequiredService<InteractionHandlingService>()
             .InitializeAsync();
 
-        await webApplication
+        await _webApplication
             .Services.GetRequiredService<CommandHandlingService>()
             .InitializeAsync();
 
@@ -66,6 +70,13 @@ internal static class WebApplicationExtensions
 #elif DEBUG
         await client.SetCustomStatusAsync("carrington.balasolu.com");
 #endif
+    }
+
+    private static Task ShardDisconnected(Exception exception, DiscordSocketClient client)
+    {
+        var audioHandlerService = _webApplication.Services.GetRequiredService<AudioHandlerService>();
+        audioHandlerService.AudioHandlers.Clear();
+        return Task.CompletedTask;
     }
 
     private static Task ReadyAsync(DiscordSocketClient shard)
