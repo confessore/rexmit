@@ -52,12 +52,15 @@
 
             objectKeys = await AmazonS3.GetAllObjectKeysAsync("rexmit", string.Empty, null);
             var guild = GetGuildByUserId(nameIdentifier.Value);
-            var user = DiscordShardedClient.GetGuild(guild.Id).GetUser(Convert.ToUInt64(nameIdentifier.Value));
-            if (user is not null)
+            if (guild is not null)
             {
-                name = user.GlobalName;
-                var voiceChannel = (user as IGuildUser)?.VoiceChannel;
-                channel = voiceChannel?.Id;
+                var user = DiscordShardedClient.GetGuild(guild.Id).GetUser(Convert.ToUInt64(nameIdentifier.Value));
+                if (user is not null)
+                {
+                    name = user.GlobalName;
+                    var voiceChannel = (user as IGuildUser)?.VoiceChannel;
+                    channel = voiceChannel?.Id;
+                }
             }
         }
     }

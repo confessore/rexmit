@@ -14,10 +14,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.Circuits;
+using rexmit.Models;
 
 namespace rexmit;
 
@@ -29,6 +31,13 @@ public sealed class UserCircuitHandler(AuthenticationStateProvider authenticatio
         CancellationToken cancellationToken
     )
     {
-        _ = await authenticationStateProvider.GetAuthenticationStateAsync();
+        var authenticationState = await authenticationStateProvider.GetAuthenticationStateAsync();
+            var securityActor = new SecurityActor();
+            var nameIdentifier = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
+        if (nameIdentifier is null)
+        {
+            securityActor.DiscordId = 0;
+        }
     }
+
 }
