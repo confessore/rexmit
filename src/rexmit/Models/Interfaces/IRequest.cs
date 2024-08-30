@@ -24,14 +24,3 @@ public interface IRequest<TResponse>
 {
 
 }
-
-public interface IRequestHandler<TRequest>
-{
-
-}
-
-
-public interface IRequestHandler<TRequest, TResponse>
-{
-
-}
