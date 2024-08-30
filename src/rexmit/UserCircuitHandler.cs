@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
@@ -35,6 +36,7 @@ public sealed class UserCircuitHandler(AuthenticationStateProvider authenticatio
     private readonly AuthenticationStateProvider _authenticationStateProvider = authenticationStateProvider;
     private readonly ISecurityActor _securityActor = securityActor;
     private readonly IMediator _mediator = mediator;
+
     public override async Task OnConnectionUpAsync(
         Circuit circuit,
         CancellationToken cancellationToken
@@ -50,10 +52,11 @@ public sealed class UserCircuitHandler(AuthenticationStateProvider authenticatio
             {
                 _securityActor.DiscordId = user.Id;
                 _securityActor.Name = user.Name;
+                Console.WriteLine(_securityActor.DiscordId);
             }
             else
             {
-                var name = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
+                var name = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Name);
                 if (name is not null)
                 {
                     user = new() { Id = id, Name = name.Value };
