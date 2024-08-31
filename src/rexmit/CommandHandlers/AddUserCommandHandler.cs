@@ -13,7 +13,7 @@ public class AddUserCommandHandler(UserService userService) : IRequestHandler<Ad
 
     public async Task<ulong> Handle(AddUserCommand request, CancellationToken cancellationToken)
     {
-        var user = new User() { Id = request.Id, Name = request.Name};
+        var user = new User() { Id = request.Id, Name = request.Name, Email = request.Email};
         await _userService.UpsertUserAsync(user);
         return user.Id;
     }

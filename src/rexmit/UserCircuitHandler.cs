@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
 using System.Security.Claims;
@@ -52,15 +53,17 @@ public sealed class UserCircuitHandler(AuthenticationStateProvider authenticatio
             {
                 _securityActor.DiscordId = user.Id;
                 _securityActor.Name = user.Name;
-                Console.WriteLine(_securityActor.DiscordId);
             }
             else
             {
                 var name = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Name);
                 if (name is not null)
                 {
-                    user = new() { Id = id, Name = name.Value };
-                    await _mediator.Send(new AddUserCommand() { Id = id, Name = name.Value }, cancellationToken);
+                    var email = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email);
+                    if (email is not null)
+                    {
+                        await _mediator.Send(new AddUserCommand() { Id = id, Name = name.Value, Email = email.Value }, cancellationToken);
+                    }
                 }
             }
         }

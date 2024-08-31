@@ -7,4 +7,5 @@ public class AddUserCommand : IRequest<ulong>
 {
     public ulong Id { get; set; }
     public string? Name { get; set;}
+    public string? Email { get; set; }
 }
