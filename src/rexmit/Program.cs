@@ -17,6 +17,7 @@
 using System;
 using Amazon.S3;
 using AspNet.Security.OAuth.Discord;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Server.Circuits;
@@ -30,6 +31,7 @@ using Microsoft.Extensions.Hosting;
 using MudBlazor.Services;
 using Npgsql.Replication;
 using rexmit;
+using rexmit.Behaviors;
 using rexmit.Contexts;
 using rexmit.Extensions;
 using rexmit.Factories;
@@ -91,6 +93,7 @@ builder
     });
 
 builder.Services.AddMediatR(configuration => configuration.RegisterServicesFromAssemblyContaining<Program>());
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingPipelineBehavior<,>));
 builder.Services.AddSingleton<ISecurityActor, SecurityActor>();
 builder.Services.AddSingleton<UserService>();
 builder.Services.AddSingleton<DiscordService>();

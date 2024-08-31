@@ -46,10 +46,6 @@ public sealed class UserCircuitHandler(AuthenticationStateProvider authenticatio
         var id = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
         var name = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Name);
         var email = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email);
-        foreach (var claim in authenticationState.User.Claims)
-        {
-            Console.WriteLine(claim.Type);
-        }
         if (id is not null && name is not null && email is not null)
         {
             var user = await _mediator.Send(new GetUserByIdQuery(Convert.ToUInt64(id.Value)), cancellationToken);
