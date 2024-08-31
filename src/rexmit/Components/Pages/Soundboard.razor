@@ -48,8 +48,11 @@
         if (firstRender)
         {
             var user = await _mediator.Send(new GetUserByIdQuery() { Id = SecurityActor.DiscordId });
-            id = user.Id;
-            StateHasChanged();
+            if (user is not null)
+            {
+                id = user.Id;
+                StateHasChanged();
+            }
         }
     }
     protected override async Task OnInitializedAsync()

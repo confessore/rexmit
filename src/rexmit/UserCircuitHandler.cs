@@ -49,12 +49,7 @@ public sealed class UserCircuitHandler(AuthenticationStateProvider authenticatio
         {
             var id = Convert.ToUInt64(nameIdentifier.Value); 
             var user = await _mediator.Send(new GetUserByIdQuery() { Id = id }, cancellationToken);
-            if (user is not null)
-            {
-                _securityActor.DiscordId = user.Id;
-                _securityActor.Name = user.Name;
-            }
-            else
+            if (user is null)
             {
                 var name = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Name);
                 if (name is not null)
@@ -62,10 +57,13 @@ public sealed class UserCircuitHandler(AuthenticationStateProvider authenticatio
                     var email = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email);
                     if (email is not null)
                     {
-                        await _mediator.Send(new AddUserCommand() { Id = id, Name = name.Value, Email = email.Value }, cancellationToken);
+                        user = await _mediator.Send(new AddUserCommand() { Id = id, Name = name.Value, Email = email.Value }, cancellationToken);
                     }
                 }
             }
+
+                _securityActor.DiscordId = user.Id;
+                _securityActor.Name = user.Name;
         }
     }
 
