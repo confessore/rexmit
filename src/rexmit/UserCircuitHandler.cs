@@ -15,7 +15,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
 using System.Security.Claims;
@@ -44,27 +43,30 @@ public sealed class UserCircuitHandler(AuthenticationStateProvider authenticatio
     )
     {
         var authenticationState = await _authenticationStateProvider.GetAuthenticationStateAsync();
-        var nameIdentifier = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
-        if (nameIdentifier is not null)
+        var id = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
+        var name = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Name);
+        var email = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email);
+        foreach (var claim in authenticationState.User.Claims)
         {
-            var id = Convert.ToUInt64(nameIdentifier.Value); 
-            var user = await _mediator.Send(new GetUserByIdQuery() { Id = id }, cancellationToken);
-            if (user is null)
+            Console.WriteLine(claim.Type);
+        }
+        if (id is not null && name is not null && email is not null)
+        {
+            var user = await _mediator.Send(new GetUserByIdQuery(Convert.ToUInt64(id.Value)), cancellationToken);
+            user ??= new User()
             {
-                var name = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Name);
-                if (name is not null)
-                {
-                    var email = authenticationState.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email);
-                    if (email is not null)
-                    {
-                        user = await _mediator.Send(new AddUserCommand() { Id = id, Name = name.Value, Email = email.Value }, cancellationToken);
-                    }
-                }
-            }
-
-                _securityActor.DiscordId = user.Id;
-                _securityActor.Name = user.Name;
+                Id = Convert.ToUInt64(id.Value),
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = Convert.ToUInt64(id.Value)
+            };
+            user.Name = name.Value;
+            user.Email = email.Value;
+            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedBy = Convert.ToUInt64(id.Value);
+            user = await _mediator.Send(new AddUserCommand(user), cancellationToken);
+            _securityActor.DiscordId = user.Id;
+            _securityActor.Name = user.Name;
+            _securityActor.Email = user.Email;
         }
     }
-
 }

@@ -22,4 +22,5 @@ public class SecurityActor : ISecurityActor
 {
     public ulong DiscordId { get; set; } = default;
     public string? Name { get; set; } = "Anonymous";
+    public string? Email { get; set; } = string.Empty;
 }

@@ -1,4 +1,4 @@
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using rexmit.Contexts;
@@ -19,7 +19,7 @@ public class UserService(IDbContextFactory<ApplicationDbContext> applicationDbCo
         return await GetUserByIdAsync(context, id);
     }
 
-    public async Task<ulong> UpsertUserAsync(ApplicationDbContext context, User user)
+    public async Task<User> UpsertUserAsync(ApplicationDbContext context, User user)
     {
         var entity = await context.Users.FirstOrDefaultAsync(user => user.Id == user.Id);
         if (entity is null)
@@ -32,11 +32,11 @@ public class UserService(IDbContextFactory<ApplicationDbContext> applicationDbCo
         }
 
         await context.SaveChangesAsync();
-        return entity.Id;
+        return entity;
     }
 
 
-    public async Task<ulong> UpsertUserAsync(User user)
+    public async Task<User> UpsertUserAsync(User user)
     {
         using var context = await _applicationDbContextFactory.CreateDbContextAsync();
         return await UpsertUserAsync(context, user);

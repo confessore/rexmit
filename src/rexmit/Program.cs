@@ -85,6 +85,9 @@ builder
         options.ClientSecret =
             Environment.GetEnvironmentVariable("DISCORD_CLIENTSECRET")
             ?? builder.Configuration.GetValue<string>("DISCORD_CLIENTSECRET");
+        options.Scope.Add("email");
+        options.Scope.Add("guilds");
+        options.SaveTokens = true;
     });
 
 builder.Services.AddMediatR(configuration => configuration.RegisterServicesFromAssemblyContaining<Program>());

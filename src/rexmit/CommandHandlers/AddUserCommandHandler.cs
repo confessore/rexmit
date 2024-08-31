@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using rexmit.Commands;
@@ -13,8 +13,7 @@ public class AddUserCommandHandler(UserService userService) : IRequestHandler<Ad
 
     public async Task<User> Handle(AddUserCommand request, CancellationToken cancellationToken)
     {
-        var user = new User() { Id = request.Id, Name = request.Name, Email = request.Email};
-        await _userService.UpsertUserAsync(user);
+        var user = await _userService.UpsertUserAsync(request.User);
         return user;
     }
 }

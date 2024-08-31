@@ -19,7 +19,6 @@ using rexmit.Models;
 
 namespace rexmit.Queries;
 
-public class GetUserByIdQuery : IRequest<User?>
+public record GetUserByIdQuery(ulong Id) : IRequest<User?>
 {
-    public ulong Id { get; set; }
 }

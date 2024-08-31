@@ -47,7 +47,7 @@
     {
         if (firstRender)
         {
-            var user = await _mediator.Send(new GetUserByIdQuery() { Id = SecurityActor.DiscordId });
+            var user = await _mediator.Send(new GetUserByIdQuery(SecurityActor.DiscordId));
             if (user is not null)
             {
                 id = user.Id;

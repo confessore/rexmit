@@ -50,8 +50,8 @@ namespace rexmit.Migrations
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("text");
+                    b.Property<decimal?>("CreatedBy")
+                        .HasColumnType("numeric(20,0)");
 
                     b.Property<string>("Email")
                         .HasColumnType("text");
@@ -62,8 +62,8 @@ namespace rexmit.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("text");
+                    b.Property<decimal?>("UpdatedBy")
+                        .HasColumnType("numeric(20,0)");
 
                     b.HasKey("Id");
 
